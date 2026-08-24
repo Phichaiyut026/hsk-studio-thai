@@ -13,6 +13,23 @@ export type AuthProfile = {
   role: AppRole;
 };
 
+export type SystemOverview = {
+  users: {
+    total: number;
+    admins: number;
+    regular: number;
+  };
+  content: {
+    vocabulary: number;
+    quizQuestions: number;
+    quizAttempts: number;
+  };
+  database: {
+    binding: string;
+    status: "ready";
+  };
+};
+
 export async function ensureHskSeedData() {
   await ensureHskSchema();
 
@@ -153,9 +170,13 @@ export async function ensureUserProfile(input: {
 }): Promise<AuthProfile> {
   await ensureHskSchema();
   const adminUserId = ((env as unknown as { ADMIN_USER_ID?: string }).ADMIN_USER_ID ?? "").trim();
+  const adminEmail = ((env as unknown as { ADMIN_EMAIL?: string }).ADMIN_EMAIL ?? "").trim().toLowerCase();
   const localAdmin = input.userId === "local-dev-user";
-  const initialRole: AppRole = input.userId === adminUserId || localAdmin ? "admin" : "user";
   const d1 = env.DB;
+  const userCount = await d1.prepare("SELECT COUNT(*) as total FROM users").first<{ total: number }>();
+  const configuredAdmin =
+    input.userId === adminUserId || input.email.toLowerCase() === adminEmail || localAdmin;
+  const initialRole: AppRole = configuredAdmin || Number(userCount?.total ?? 0) === 0 ? "admin" : "user";
 
   await d1.prepare(
     `INSERT INTO users (user_id, email, display_name, role)
@@ -165,6 +186,12 @@ export async function ensureUserProfile(input: {
        display_name = excluded.display_name,
        updated_at = CURRENT_TIMESTAMP`,
   ).bind(input.userId, input.email, input.displayName, initialRole).run();
+
+  if (configuredAdmin) {
+    await d1.prepare(
+      "UPDATE users SET role = 'admin', updated_at = CURRENT_TIMESTAMP WHERE user_id = ?",
+    ).bind(input.userId).run();
+  }
 
   const profile = await d1.prepare(
     "SELECT user_id, email, display_name, role FROM users WHERE user_id = ? LIMIT 1",
@@ -198,6 +225,39 @@ export async function updateUserRole(userId: string, role: AppRole) {
   await ensureHskSchema();
   const db = getDb();
   await db.update(users).set({ role, updatedAt: new Date().toISOString() }).where(eq(users.userId, userId));
+}
+
+export async function getSystemOverview(): Promise<SystemOverview> {
+  await ensureHskSchema();
+  const db = getDb();
+
+  const [userStats] = await db.select({
+    total: count(),
+    admins: sql<number>`coalesce(sum(case when ${users.role} = 'admin' then 1 else 0 end), 0)`,
+  }).from(users);
+  const [vocabStats] = await db.select({ total: count() }).from(vocabulary);
+  const [questionStats] = await db.select({ total: count() }).from(quizQuestions);
+  const [attemptStats] = await db.select({ total: count() }).from(quizAttempts);
+
+  const totalUsers = Number(userStats?.total ?? 0);
+  const admins = Number(userStats?.admins ?? 0);
+
+  return {
+    users: {
+      total: totalUsers,
+      admins,
+      regular: Math.max(totalUsers - admins, 0),
+    },
+    content: {
+      vocabulary: Number(vocabStats?.total ?? 0),
+      quizQuestions: Number(questionStats?.total ?? 0),
+      quizAttempts: Number(attemptStats?.total ?? 0),
+    },
+    database: {
+      binding: "DB",
+      status: "ready",
+    },
+  };
 }
 
 export async function getStudyData(sessionId: string) {
