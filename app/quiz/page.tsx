@@ -1,14 +1,14 @@
-import { getAuthPaths, getChatGPTUser } from "./chatgpt-auth";
-import HomeClient from "./HomeClient";
+import { getAuthPaths, getChatGPTUser } from "../chatgpt-auth";
+import QuizClient from "./QuizClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home() {
+export default async function QuizPage() {
   const user = await getChatGPTUser();
-  const authPaths = await getAuthPaths("/");
+  const authPaths = await getAuthPaths("/quiz");
 
   return (
-    <HomeClient
+    <QuizClient
       authPaths={authPaths}
       user={
         user

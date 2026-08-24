@@ -1,4 +1,4 @@
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 export type ChatGPTUser = {
@@ -17,12 +17,28 @@ const PERCENT_ENCODED_UTF8 = "percent-encoded-utf-8";
 const SIGN_IN_PATH = "/signin-with-chatgpt";
 const SIGN_OUT_PATH = "/signout-with-chatgpt";
 const CALLBACK_PATH = "/callback";
+const DEV_USER_ID_COOKIE = "hsk-dev-user-id";
+const DEV_USER_EMAIL_COOKIE = "hsk-dev-user-email";
 
 export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
   const requestHeaders = await headers();
   const userId = requestHeaders.get(USER_ID_HEADER);
   const email = requestHeaders.get(USER_EMAIL_HEADER);
-  if (!userId || !email) return null;
+  if (!userId || !email) {
+    if (!isLocalRequest(requestHeaders)) return null;
+
+    const cookieStore = await cookies();
+    const devUserId = cookieStore.get(DEV_USER_ID_COOKIE)?.value;
+    const devEmail = cookieStore.get(DEV_USER_EMAIL_COOKIE)?.value;
+    if (!devUserId || !devEmail) return null;
+
+    return {
+      userId: devUserId,
+      displayName: "Local learner",
+      email: devEmail,
+      fullName: "Local learner",
+    };
+  }
 
   const encodedFullName = requestHeaders.get(USER_FULL_NAME_HEADER);
   const fullName =
@@ -58,6 +74,30 @@ export function chatGPTSignOutPath(returnTo = "/"): string {
   return `${SIGN_OUT_PATH}?return_to=${encodeURIComponent(safeReturnTo)}`;
 }
 
+export async function getAuthPaths(returnTo = "/") {
+  const requestHeaders = await headers();
+  const safeReturnTo = safeRelativeReturnPath(returnTo);
+
+  if (isLocalRequest(requestHeaders)) {
+    return {
+      signIn: `/api/dev-auth/signin?return_to=${encodeURIComponent(safeReturnTo)}`,
+      signOut: `/api/dev-auth/signout?return_to=${encodeURIComponent(safeReturnTo)}`,
+    };
+  }
+
+  return {
+    signIn: chatGPTSignInPath(safeReturnTo),
+    signOut: chatGPTSignOutPath(safeReturnTo),
+  };
+}
+
+export function getDevAuthCookieNames() {
+  return {
+    userId: DEV_USER_ID_COOKIE,
+    email: DEV_USER_EMAIL_COOKIE,
+  };
+}
+
 function safeRelativeReturnPath(value: string): string {
   if (!value.startsWith("/") || value.startsWith("//")) return "/";
 
@@ -79,6 +119,11 @@ function isReservedAuthPath(pathname: string): boolean {
     pathname === SIGN_OUT_PATH ||
     pathname === CALLBACK_PATH
   );
+}
+
+function isLocalRequest(requestHeaders: Headers) {
+  const host = requestHeaders.get("host") ?? "";
+  return host.startsWith("localhost") || host.startsWith("127.0.0.1");
 }
 
 function safeDecodeURIComponent(value: string): string | null {
