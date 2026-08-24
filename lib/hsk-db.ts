@@ -136,6 +136,10 @@ async function ensureHskSchema() {
         pinyin text NOT NULL,
         thai text NOT NULL,
         example text NOT NULL,
+        english text NOT NULL DEFAULT '',
+        part_of_speech text,
+        tts_url text,
+        source text NOT NULL DEFAULT 'local',
         position integer NOT NULL,
         created_at text DEFAULT CURRENT_TIMESTAMP NOT NULL
       )`,
@@ -190,6 +194,10 @@ async function ensureHskSchema() {
   }
 
   for (const statement of [
+    "ALTER TABLE vocabulary ADD COLUMN english text NOT NULL DEFAULT ''",
+    "ALTER TABLE vocabulary ADD COLUMN part_of_speech text",
+    "ALTER TABLE vocabulary ADD COLUMN tts_url text",
+    "ALTER TABLE vocabulary ADD COLUMN source text NOT NULL DEFAULT 'local'",
     "ALTER TABLE quiz_questions ADD COLUMN document_id text NOT NULL DEFAULT 'H11329'",
     "ALTER TABLE quiz_questions ADD COLUMN part text NOT NULL DEFAULT 'reading'",
     "ALTER TABLE quiz_questions ADD COLUMN section text NOT NULL DEFAULT '1'",
@@ -487,6 +495,70 @@ export async function addQuizQuestion(input: {
     input.format, input.questionNumber, input.mediaUrl?.trim() || null,
   ).run();
   return { id };
+}
+
+type HuggingFaceHskRow = {
+  level?: number;
+  hanzi?: string;
+  pinyin?: string;
+  pinyin_tone?: string;
+  english?: string;
+  pos?: string | null;
+  tts_url?: string | null;
+};
+
+export async function syncHuggingFaceHskVocabulary() {
+  await ensureHskSchema();
+  const endpoint = "https://datasets-server.huggingface.co/rows?dataset=willfliaw%2Fhsk-dataset&config=default&split=train";
+  const importedRows: HuggingFaceHskRow[] = [];
+  const pageSize = 100;
+
+  for (let offset = 0; offset < 10000; offset += pageSize) {
+    const response = await fetch(`${endpoint}&offset=${offset}&length=${pageSize}`, {
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) throw new Error(`Hugging Face API returned ${response.status}`);
+    const payload = (await response.json()) as { rows?: Array<{ row?: HuggingFaceHskRow } | HuggingFaceHskRow> };
+    const rows = (payload.rows ?? []).map((item) => ("row" in item && item.row ? item.row : item as HuggingFaceHskRow));
+    if (!rows.length) break;
+    importedRows.push(...rows);
+    if (rows.length < pageSize) break;
+  }
+
+  const validRows = importedRows.filter((row) => Number(row.level) >= 1 && Number(row.level) <= 6 && row.hanzi?.trim());
+  const d1 = env.DB;
+  for (let index = 0; index < validRows.length; index += 50) {
+    const batch = validRows.slice(index, index + 50).map((row) => {
+      const level = Number(row.level);
+      const hanzi = row.hanzi!.trim();
+      const english = row.english?.trim() ?? "";
+      return d1.prepare(
+        `INSERT INTO vocabulary
+          (id, level_id, hanzi, pinyin, thai, example, english, part_of_speech, tts_url, source, position)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET
+           pinyin = excluded.pinyin,
+           english = excluded.english,
+           part_of_speech = excluded.part_of_speech,
+           tts_url = excluded.tts_url`,
+      ).bind(
+        `hf-hsk-${level}-${hanzi}`,
+        `hsk${level}`,
+        hanzi,
+        row.pinyin_tone?.trim() || row.pinyin?.trim() || "",
+        english,
+        "",
+        english,
+        row.pos?.trim() || null,
+        row.tts_url?.trim() || null,
+        "huggingface:willfliaw/hsk-dataset",
+        index + validRows.indexOf(row),
+      );
+    });
+    await d1.batch(batch);
+  }
+
+  return { imported: validRows.length, source: "willfliaw/hsk-dataset", license: "CC BY 4.0" };
 }
 
 export async function getStudyData(sessionId: string) {

@@ -122,6 +122,25 @@ export default function AdminClient({
     setBusy(false);
   }
 
+  async function syncHuggingFaceData() {
+    setBusy(true);
+    setMessage("กำลังดึงคำศัพท์จาก Hugging Face...");
+    const response = await fetch("/api/admin/system", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "sync-huggingface-hsk" }),
+    });
+    const data = (await response.json().catch(() => ({}))) as { result?: { imported?: number }; error?: string; overview?: SystemOverview };
+    if (response.ok) {
+      if (data.overview) setOverview(data.overview);
+      await loadVocabulary();
+      setMessage(`นำเข้าคำศัพท์ HSK สำเร็จ ${data.result?.imported ?? 0} รายการ`);
+    } else {
+      setMessage(data.error ?? "ดึงข้อมูลจาก Hugging Face ไม่สำเร็จ");
+    }
+    setBusy(false);
+  }
+
   const filteredUsers = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     if (!normalized) return users;
@@ -167,7 +186,7 @@ export default function AdminClient({
           <div><span className="admin-breadcrumb">Admin Console / {tabLabel(activeTab)}</span><h1>{tabTitle(activeTab)}</h1></div>
           <div className="admin-topbar-actions"><span className="admin-live-status"><i /> ระบบทำงานปกติ</span><a href="/" target="_blank" rel="noreferrer" className="admin-open-site">ดูเว็บไซต์</a></div>
         </header>
-        {activeTab === "overview" ? <OverviewPanel overview={overview} busy={busy} seedHskData={seedHskData} setActiveTab={setActiveTab} /> : activeTab === "users" ? <UsersPanel users={filteredUsers} query={query} setQuery={setQuery} currentUserEmail={user.email} changeRole={changeRole} onCreated={() => Promise.all([loadUsers(), loadOverview()])} setMessage={setMessage} /> : activeTab === "vocabulary" ? <VocabularyPanel setMessage={setMessage} onSaved={loadVocabulary} /> : activeTab === "vocabulary-list" ? <VocabularyListPanel vocabulary={filteredVocabulary} query={vocabularyQuery} setQuery={setVocabularyQuery} level={vocabularyLevel} setLevel={setVocabularyLevel} setMessage={setMessage} onChanged={loadVocabulary} /> : <ExamsPanel questions={questions} setMessage={setMessage} onSaved={loadQuestions} />}
+        {activeTab === "overview" ? <OverviewPanel overview={overview} busy={busy} seedHskData={seedHskData} syncHuggingFaceData={syncHuggingFaceData} setActiveTab={setActiveTab} /> : activeTab === "users" ? <UsersPanel users={filteredUsers} query={query} setQuery={setQuery} currentUserEmail={user.email} changeRole={changeRole} onCreated={() => Promise.all([loadUsers(), loadOverview()])} setMessage={setMessage} /> : activeTab === "vocabulary" ? <VocabularyPanel setMessage={setMessage} onSaved={loadVocabulary} /> : activeTab === "vocabulary-list" ? <VocabularyListPanel vocabulary={filteredVocabulary} query={vocabularyQuery} setQuery={setVocabularyQuery} level={vocabularyLevel} setLevel={setVocabularyLevel} setMessage={setMessage} onChanged={loadVocabulary} /> : <ExamsPanel questions={questions} setMessage={setMessage} onSaved={loadQuestions} />}
         {message && <p className="admin-toast" role="status">{message}</p>}
       </main>
     </div>
@@ -298,7 +317,7 @@ function ExamsPanel({ questions, setMessage, onSaved }: { questions: AdminQuesti
   );
 }
 
-function OverviewPanel({ overview, busy, seedHskData, setActiveTab }: { overview: SystemOverview | null; busy: boolean; seedHskData: () => Promise<void>; setActiveTab: (tab: AdminTab) => void }) {
+function OverviewPanel({ overview, busy, seedHskData, syncHuggingFaceData, setActiveTab }: { overview: SystemOverview | null; busy: boolean; seedHskData: () => Promise<void>; syncHuggingFaceData: () => Promise<void>; setActiveTab: (tab: AdminTab) => void }) {
   return (
     <div className="admin-content">
       <section className="admin-welcome"><div><span className="admin-eyebrow">ศูนย์ควบคุม HSK Studio</span><h2>สวัสดีครับ, พร้อมจัดการระบบแล้ว</h2><p>ดูภาพรวมผู้เรียน ตรวจข้อมูลการเรียน และจัดการสิทธิ์ได้จากหน้านี้</p></div><div className="admin-welcome-mark">漢</div></section>
@@ -309,7 +328,7 @@ function OverviewPanel({ overview, busy, seedHskData, setActiveTab }: { overview
         <Metric label="การทำแบบทดสอบ" value={overview?.content.quizAttempts ?? 0} hint="ความพยายามทั้งหมด" tone="gold" />
       </section>
       <div className="admin-dashboard-grid">
-        <section className="admin-card admin-database-card"><div className="admin-card-heading"><div><span className="admin-card-kicker">สถานะระบบ</span><h3>ฐานข้อมูล D1</h3></div><span className="admin-status-badge"><i /> พร้อมใช้งาน</span></div><p>ฐานข้อมูลเชื่อมต่อแล้วและพร้อมเก็บข้อมูลผู้ใช้ คำศัพท์ คำถาม และผลแบบทดสอบ</p><div className="admin-binding-row"><span>Binding</span><strong>{overview?.database.binding ?? "DB"}</strong></div><button className="admin-primary-button" type="button" onClick={seedHskData} disabled={busy}>{busy ? "กำลังเตรียมข้อมูล..." : "เตรียมข้อมูล HSK"}</button></section>
+      <section className="admin-card admin-database-card"><div className="admin-card-heading"><div><span className="admin-card-kicker">สถานะระบบ</span><h3>ฐานข้อมูล D1</h3></div><span className="admin-status-badge"><i /> พร้อมใช้งาน</span></div><p>ฐานข้อมูลเชื่อมต่อแล้วและพร้อมเก็บข้อมูลผู้ใช้ คำศัพท์ คำถาม และผลแบบทดสอบ</p><div className="admin-binding-row"><span>Binding</span><strong>{overview?.database.binding ?? "DB"}</strong></div><div className="flex flex-wrap gap-2"><button className="admin-primary-button" type="button" onClick={seedHskData} disabled={busy}>{busy ? "กำลังเตรียมข้อมูล..." : "เตรียมข้อมูล HSK"}</button><button className="admin-outline-button" type="button" onClick={syncHuggingFaceData} disabled={busy}>{busy ? "กำลัง Sync..." : "ดึงคำศัพท์จาก Hugging Face"}</button></div></section>
         <section className="admin-card admin-actions-card"><div className="admin-card-heading"><div><span className="admin-card-kicker">การจัดการ</span><h3>ทางลัดสำหรับแอดมิน</h3></div></div><button type="button" className="admin-action-row" onClick={() => setActiveTab("users")}><span className="admin-action-icon">U</span><span><strong>จัดการผู้ใช้</strong><small>เปลี่ยนสิทธิ์ User และ Admin</small></span><b>→</b></button><a className="admin-action-row" href="/" target="_blank" rel="noreferrer"><span className="admin-action-icon">W</span><span><strong>เปิดหน้าเว็บไซต์</strong><small>ตรวจประสบการณ์ของผู้เรียน</small></span><b>↗</b></a></section>
       </div>
       <section className="admin-card admin-summary-card"><div className="admin-card-heading"><div><span className="admin-card-kicker">สรุปข้อมูล</span><h3>โครงสร้างผู้ใช้และเนื้อหา</h3></div><button type="button" className="admin-text-button" onClick={() => setActiveTab("users")}>ดูผู้ใช้ทั้งหมด →</button></div><div className="admin-summary-list"><SummaryRow label="ผู้ใช้ทั่วไป" value={overview?.users.regular ?? 0} total={overview?.users.total ?? 0} color="var(--blue)" /><SummaryRow label="คำถามแบบทดสอบ" value={overview?.content.quizQuestions ?? 0} total={overview?.content.quizQuestions ?? 0} color="var(--teal)" /><SummaryRow label="ผู้ดูแลระบบ" value={overview?.users.admins ?? 0} total={overview?.users.total ?? 0} color="var(--red)" /></div></section>

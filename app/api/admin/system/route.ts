@@ -3,6 +3,7 @@ import {
   ensureHskSeedData,
   ensureUserProfile,
   getSystemOverview,
+  syncHuggingFaceHskVocabulary,
 } from "../../../../lib/hsk-db";
 
 async function getAdmin() {
@@ -36,6 +37,11 @@ export async function POST(request: Request) {
     }
 
     const payload = (await request.json()) as { action?: string };
+    if (payload.action === "sync-huggingface-hsk") {
+      const result = await syncHuggingFaceHskVocabulary();
+      return Response.json({ ok: true, result, overview: await getSystemOverview() });
+    }
+
     if (payload.action !== "seed-hsk-data") {
       return Response.json({ error: "Unknown system action" }, { status: 400 });
     }
