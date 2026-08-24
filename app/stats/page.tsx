@@ -1,11 +1,13 @@
 import { getAuthPaths, getChatGPTUser } from "../chatgpt-auth";
 import StatsClient from "./StatsClient";
+import { isAdminUser } from "../admin/access";
 
 export const dynamic = "force-dynamic";
 
 export default async function StatsPage() {
   const user = await getChatGPTUser();
   const authPaths = await getAuthPaths("/stats");
+  const isAdmin = await isAdminUser(user);
 
   return (
     <StatsClient
@@ -18,6 +20,7 @@ export default async function StatsPage() {
             }
           : null
       }
+      isAdmin={isAdmin}
     />
   );
 }

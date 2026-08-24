@@ -29,6 +29,7 @@ type Props = {
     displayName: string;
     email: string;
   } | null;
+  isAdmin: boolean;
 };
 
 function getSessionId() {
@@ -42,7 +43,7 @@ function getSessionId() {
   return next;
 }
 
-export default function QuizClient({ authPaths, user }: Props) {
+export default function QuizClient({ authPaths, user, isAdmin }: Props) {
   const [levels, setLevels] = useState<Level[]>(hskLevels);
   const [selectedLevelId, setSelectedLevelId] = useState<string>("hsk1");
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -239,7 +240,7 @@ export default function QuizClient({ authPaths, user }: Props) {
   return (
     <div className="min-h-screen bg-[var(--page)] text-[var(--ink)] flex flex-col justify-between">
       <div>
-        <Navbar authPaths={authPaths} user={user} />
+        <Navbar authPaths={authPaths} user={user} isAdmin={isAdmin} />
 
         <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header */}
@@ -465,7 +466,7 @@ export default function QuizClient({ authPaths, user }: Props) {
         </main>
       </div>
 
-      <Footer />
+      <Footer isAdmin={isAdmin} />
     </div>
   );
 }

@@ -42,6 +42,7 @@ type Props = {
     displayName: string;
     email: string;
   } | null;
+  isAdmin: boolean;
 };
 
 function getSessionId() {
@@ -55,19 +56,10 @@ function getSessionId() {
   return next;
 }
 
-export default function StatsClient({ authPaths, user }: Props) {
+export default function StatsClient({ authPaths, user, isAdmin }: Props) {
   const [levels, setLevels] = useState<Level[]>(hskLevels);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [quizStats, setQuizStats] = useState<QuizStats | null>(null);
   const [progress, setProgress] = useState<ProgressStats | null>(null);
-
-  useEffect(() => {
-    if (!user) return;
-    fetch("/api/auth/role")
-      .then((response) => response.ok ? response.json() : { isAdmin: false })
-      .then((data: { isAdmin?: boolean }) => setIsAdmin(data.isAdmin === true))
-      .catch(() => setIsAdmin(false));
-  }, [user]);
 
   const [masteredWords] = useState<string[]>(() => {
     if (typeof window === "undefined") return [];
@@ -131,7 +123,7 @@ export default function StatsClient({ authPaths, user }: Props) {
   return (
     <div className="min-h-screen bg-[var(--page)] text-[var(--ink)] flex flex-col justify-between">
       <div>
-        <Navbar authPaths={authPaths} user={user} />
+        <Navbar authPaths={authPaths} user={user} isAdmin={isAdmin} />
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header */}
@@ -453,7 +445,7 @@ export default function StatsClient({ authPaths, user }: Props) {
         </main>
       </div>
 
-      <Footer />
+      <Footer isAdmin={isAdmin} />
     </div>
   );
 }

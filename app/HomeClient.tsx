@@ -15,11 +15,11 @@ type Props = {
     displayName: string;
     email: string;
   } | null;
+  isAdmin: boolean;
 };
 
-export default function HomeClient({ authPaths, user }: Props) {
+export default function HomeClient({ authPaths, user, isAdmin }: Props) {
   const [levels, setLevels] = useState<Level[]>(hskLevels);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [checkedTasks] = useState<string[]>(() => {
     if (typeof window === "undefined") return [];
     try {
@@ -41,14 +41,6 @@ export default function HomeClient({ authPaths, user }: Props) {
     return () => { ignore = true; };
   }, []);
 
-  useEffect(() => {
-    if (!user) return;
-    fetch("/api/auth/role")
-      .then((response) => response.ok ? response.json() : { isAdmin: false })
-      .then((data: { isAdmin?: boolean }) => setIsAdmin(data.isAdmin === true))
-      .catch(() => setIsAdmin(false));
-  }, [user]);
-
   // Daily word randomly picked or fixed based on date
   const wordOfTheDay = useMemo(() => {
     const allWords = levels.flatMap((l) => l.vocabulary);
@@ -61,7 +53,7 @@ export default function HomeClient({ authPaths, user }: Props) {
   return (
     <div className="min-h-screen bg-[var(--page)] text-[var(--ink)] flex flex-col justify-between">
       <div>
-        <Navbar authPaths={authPaths} user={user} />
+        <Navbar authPaths={authPaths} user={user} isAdmin={isAdmin} />
 
         {/* Hero Section */}
         <section className="hero">
@@ -320,7 +312,7 @@ export default function HomeClient({ authPaths, user }: Props) {
         </section>
       </div>
 
-      <Footer />
+      <Footer isAdmin={isAdmin} />
     </div>
   );
 }

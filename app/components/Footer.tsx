@@ -1,16 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 
-export default function Footer() {
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/auth/role")
-      .then((response) => response.ok ? response.json() : { isAdmin: false })
-      .then((data: { isAdmin?: boolean }) => setIsAdmin(data.isAdmin === true))
-      .catch(() => setIsAdmin(false));
-  }, []);
+export default function Footer({ isAdmin = false }: { isAdmin?: boolean }) {
 
   return (
     <footer className="w-full bg-[var(--paper)] border-t border-[var(--line)] py-12 mt-20 text-[var(--muted)] text-sm">

@@ -14,9 +14,10 @@ type Props = {
     displayName: string;
     email: string;
   } | null;
+  isAdmin: boolean;
 };
 
-export default function PlanClient({ authPaths, user }: Props) {
+export default function PlanClient({ authPaths, user, isAdmin }: Props) {
   const [tasks, setTasks] = useState<string[]>(() => {
     if (typeof window === "undefined") return defaultTasks;
     try {
@@ -117,7 +118,7 @@ export default function PlanClient({ authPaths, user }: Props) {
   return (
     <div className="min-h-screen bg-[var(--page)] text-[var(--ink)] flex flex-col justify-between">
       <div>
-        <Navbar authPaths={authPaths} user={user} />
+        <Navbar authPaths={authPaths} user={user} isAdmin={isAdmin} />
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header */}
@@ -400,7 +401,7 @@ export default function PlanClient({ authPaths, user }: Props) {
         </main>
       </div>
 
-      <Footer />
+      <Footer isAdmin={isAdmin} />
     </div>
   );
 }

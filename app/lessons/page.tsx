@@ -8,7 +8,8 @@ export const dynamic = "force-dynamic";
 export default async function LessonsPage() {
   const user = await getChatGPTUser();
   const authPaths = await getAuthPaths("/lessons");
-  if (!(await isAdminUser(user))) return <AdminOnlyGate signIn={authPaths.signIn} />;
+  const isAdmin = await isAdminUser(user);
+  if (!isAdmin) return <AdminOnlyGate signIn={authPaths.signIn} />;
 
   return (
     <LessonsClient
@@ -21,6 +22,7 @@ export default async function LessonsPage() {
             }
           : null
       }
+      isAdmin={isAdmin}
     />
   );
 }

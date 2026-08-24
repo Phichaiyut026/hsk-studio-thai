@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 type NavbarProps = {
   authPaths?: {
@@ -12,42 +12,24 @@ type NavbarProps = {
     displayName: string;
     email: string;
   } | null;
+  isAdmin?: boolean;
 };
 
-export default function Navbar({ authPaths, user }: NavbarProps) {
+export default function Navbar({ authPaths, user, isAdmin = false }: NavbarProps) {
   const pathname = usePathname();
+  const currentPathname = pathname ?? "/";
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    let ignore = false;
-    if (!user) {
-      setIsAdmin(false);
-      return () => { ignore = true; };
-    }
-
-    fetch("/api/auth/role")
-      .then((response) => response.ok ? response.json() : { isAdmin: false })
-      .then((data: { isAdmin?: boolean }) => {
-        if (!ignore) setIsAdmin(data.isAdmin === true);
-      })
-      .catch(() => {
-        if (!ignore) setIsAdmin(false);
-      });
-
-    return () => { ignore = true; };
-  }, [user]);
 
   const navItems = [
     { href: "/", label: "หน้าแรก" },
     { href: "/vocabulary", label: "บัตรคำ & คลังศัพท์" },
-    { href: "/stats", label: "สถิติ & ความคืบหน้า" },
     ...(isAdmin ? [
       { href: "/lessons", label: "บทเรียน & ไวยากรณ์" },
       { href: "/quiz", label: "แบบทดสอบ" },
       { href: "/plan", label: "แผนเรียน & จับเวลา" },
-      { href: "/admin", label: "Dashboard" },
     ] : []),
+    { href: "/stats", label: "สถิติ & ความคืบหน้า" },
+    ...(isAdmin ? [{ href: "/admin", label: "Dashboard" }] : []),
   ];
 
   return (
@@ -72,13 +54,12 @@ export default function Navbar({ authPaths, user }: NavbarProps) {
           {/* Desktop Nav Items */}
           <nav className="site-navbar-menu">
             {navItems.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive = currentPathname === item.href || (item.href !== "/" && currentPathname.startsWith(`${item.href}/`));
               return (
                 <a
                   key={item.href}
                   href={item.href}
-                  target={item.href === "/admin" ? "_blank" : undefined}
-                  rel={item.href === "/admin" ? "noreferrer" : undefined}
+                  aria-current={isActive ? "page" : undefined}
                   className={`site-navbar-item ${isActive ? "is-active" : ""}`}
                 >
                   {item.label}
@@ -129,13 +110,12 @@ export default function Navbar({ authPaths, user }: NavbarProps) {
       {mobileMenuOpen && (
         <div className="site-navbar-mobile">
           {navItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = currentPathname === item.href || (item.href !== "/" && currentPathname.startsWith(`${item.href}/`));
             return (
               <a
                 key={item.href}
                 href={item.href}
-                target={item.href === "/admin" ? "_blank" : undefined}
-                rel={item.href === "/admin" ? "noreferrer" : undefined}
+                aria-current={isActive ? "page" : undefined}
                 onClick={() => setMobileMenuOpen(false)}
                 className={`site-navbar-mobile-item ${isActive ? "is-active" : ""}`}
               >
