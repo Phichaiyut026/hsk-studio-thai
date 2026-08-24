@@ -70,6 +70,12 @@ export default function Navbar({ authPaths, user }: NavbarProps) {
           <div className="hidden md:flex items-center gap-2">
             {user ? (
               <div className="flex items-center gap-2">
+                <a
+                  href="/admin"
+                  className="px-3 py-1.5 text-xs font-bold text-[var(--ink)] bg-[var(--paper)] hover:bg-black/5 border border-[var(--line)] rounded-lg transition-all"
+                >
+                  Dashboard
+                </a>
                 <span className="px-3 py-1.5 text-xs font-bold text-[var(--ink)] bg-black/5 border border-[var(--line)] rounded-lg truncate max-w-[160px]">
                   👤 {user.displayName}
                 </span>
@@ -128,14 +134,16 @@ export default function Navbar({ authPaths, user }: NavbarProps) {
           <div className="pt-3 mt-2 border-t border-[var(--line)]">
             {user ? (
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[var(--muted)]">
-                  {user.displayName}
-                </span>
+                <div className="flex items-center gap-3">
+                  <a href="/admin" className="text-xs font-bold text-[var(--ink)]">
+                    Dashboard
+                  </a>
+                  <span className="text-xs font-bold text-[var(--muted)]">
+                    {user.displayName}
+                  </span>
+                </div>
                 {authPaths?.signOut && (
-                  <a
-                    href={authPaths.signOut}
-                    className="text-xs font-bold text-[var(--red)]"
-                  >
+                  <a href={authPaths.signOut} className="text-xs font-bold text-[var(--red)]">
                     ออกจากระบบ
                   </a>
                 )}
