@@ -70,12 +70,6 @@ export default function VocabularyClient({ authPaths, user }: Props) {
     setFlipped(false);
   }
 
-  function handlePrevCard() {
-    if (filteredWords.length === 0) return;
-    setCardIndex((prev) => (prev - 1 + filteredWords.length) % filteredWords.length);
-    setFlipped(false);
-  }
-
   function handleShuffle() {
     if (filteredWords.length <= 1) return;
     const randomIndex = Math.floor(Math.random() * filteredWords.length);
@@ -107,9 +101,6 @@ export default function VocabularyClient({ authPaths, user }: Props) {
       } else if (e.code === "ArrowRight") {
         e.preventDefault();
         handleNextCard();
-      } else if (e.code === "ArrowLeft") {
-        e.preventDefault();
-        handlePrevCard();
       }
     }
     window.addEventListener("keydown", handleKeyDown);
@@ -189,7 +180,7 @@ export default function VocabularyClient({ authPaths, user }: Props) {
                     : "text-[var(--muted)] hover:text-black"
                 }`}
               >
-                <span>โหมดบัตรคำ (Flashcard)</span>
+                <span>โหมดบัตรคำ</span>
               </button>
               <button
                 type="button"
@@ -200,7 +191,6 @@ export default function VocabularyClient({ authPaths, user }: Props) {
                     : "text-[var(--muted)] hover:text-black"
                 }`}
               >
-                <span>📋</span>
                 <span>โหมดตารางคำศัพท์</span>
               </button>
             </div>
@@ -228,9 +218,6 @@ export default function VocabularyClient({ authPaths, user }: Props) {
 
             {/* Search Input */}
             <div className="relative flex-1 max-w-md">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
-                🔍
-              </span>
               <input
                 type="text"
                 value={searchQuery}
@@ -239,7 +226,7 @@ export default function VocabularyClient({ authPaths, user }: Props) {
                   setCardIndex(0);
                 }}
                 placeholder="ค้นหาตัวจีน, พินอิน หรือคำแปลไทย..."
-                className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-[var(--line)] rounded-xl focus:outline-none focus:border-[var(--ink)] transition-colors"
+                className="w-full px-4 py-2 text-sm bg-white border border-[var(--line)] rounded-xl focus:outline-none focus:border-[var(--ink)] transition-colors"
               />
               {searchQuery && (
                 <button
@@ -247,7 +234,7 @@ export default function VocabularyClient({ authPaths, user }: Props) {
                   onClick={() => setSearchQuery("")}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-black text-xs font-bold"
                 >
-                  ✕
+                  ล้าง
                 </button>
               )}
             </div>
@@ -371,24 +358,17 @@ export default function VocabularyClient({ authPaths, user }: Props) {
                         onClick={() => setFlipped(!flipped)}
                         className="text-[var(--muted)] font-semibold hover:text-black"
                       >
-                        แตะเพื่อพลิกการ์ด ↺
+                        แตะเพื่อพลิกการ์ด
                       </button>
                     </div>
                   </div>
 
-                  {/* Navigation controls below card */}
-                  <div className="grid grid-cols-3 gap-3 mt-5">
-                    <button
-                      type="button"
-                      onClick={handlePrevCard}
-                      className="py-3 px-4 rounded-xl bg-white border border-[var(--line)] hover:bg-gray-50 text-[var(--ink)] font-bold text-sm shadow-xs transition-transform active:scale-95"
-                    >
-                      ← คำก่อนหน้า
-                    </button>
+                  {/* Forward Navigation controls */}
+                  <div className="grid grid-cols-2 gap-3 mt-5">
                     <button
                       type="button"
                       onClick={handleShuffle}
-                      className="py-3 px-4 rounded-xl bg-white border border-[var(--line)] hover:bg-gray-50 text-[var(--ink)] font-bold text-sm shadow-xs transition-transform active:scale-95 flex items-center justify-center gap-1"
+                      className="py-3 px-4 rounded-xl bg-white border border-[var(--line)] hover:bg-gray-50 text-[var(--ink)] font-bold text-sm shadow-xs transition-transform active:scale-95"
                     >
                       สุ่มคำ
                     </button>
@@ -397,7 +377,7 @@ export default function VocabularyClient({ authPaths, user }: Props) {
                       onClick={handleNextCard}
                       className="py-3 px-4 rounded-xl bg-[var(--ink)] hover:bg-black text-white font-bold text-sm shadow-sm transition-transform active:scale-95"
                     >
-                      คำถัดไป →
+                      คำถัดไป
                     </button>
                   </div>
                 </div>
@@ -445,7 +425,7 @@ export default function VocabularyClient({ authPaths, user }: Props) {
                             {word.hanzi}
                           </span>
                           <div className="flex items-center gap-1.5">
-                            <SpeakButton text={word.hanzi} label="" className="p-1.5" />
+                            <SpeakButton text={word.hanzi} label="ฟัง" className="p-1.5" />
                             {word.category && (
                               <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-600">
                                 {word.category}

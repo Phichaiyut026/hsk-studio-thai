@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import SpeakButton from "./components/SpeakButton";
@@ -58,15 +59,15 @@ export default function HomeClient({ authPaths, user }: Props) {
                 นาทีต่อวัน
               </p>
               <div className="hero-actions">
-                <a href="/vocabulary" className="primary-action">
+                <Link href="/vocabulary" className="primary-action">
                   เริ่มฝึกบัตรคำศัพท์
-                </a>
-                <a href="/lessons" className="secondary-action">
-                  ดูบทเรียน & ไวยากรณ์
-                </a>
-                <a href="/quiz" className="secondary-action">
+                </Link>
+                <Link href="/lessons" className="secondary-action">
+                  ดูบทเรียนและไวยากรณ์
+                </Link>
+                <Link href="/quiz" className="secondary-action">
                   ทำแบบทดสอบ
-                </a>
+                </Link>
               </div>
             </div>
 
@@ -101,7 +102,7 @@ export default function HomeClient({ authPaths, user }: Props) {
                   <span className="font-bold text-amber-900">ตัวอย่าง:</span>
                   <SpeakButton
                     text={wordOfTheDay.example}
-                    label=""
+                    label="ฟังประโยค"
                     className="p-1 text-[10px]"
                   />
                 </div>
@@ -128,7 +129,7 @@ export default function HomeClient({ authPaths, user }: Props) {
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
           <div className="text-center sm:text-left mb-8">
             <span className="text-xs font-black uppercase tracking-wider text-[var(--red)]">
-              เมนูหลัก & ห้องเรียน
+              เมนูหลักและห้องเรียน
             </span>
             <h2 className="text-3xl font-black text-[var(--ink)] mt-1">
               เลือกโหมดการเรียนรู้ที่คุณต้องการ
@@ -137,13 +138,16 @@ export default function HomeClient({ authPaths, user }: Props) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Card 1: Vocabulary & Flashcards */}
-            <a
+            <Link
               href="/vocabulary"
               className="p-7 rounded-3xl bg-[var(--paper)] border border-[var(--line)] hover:border-black/40 hover:shadow-lg transition-all flex flex-col justify-between group"
             >
               <div>
+                <div className="px-3 py-1 rounded-full bg-red-100/80 text-[var(--red)] text-xs font-bold uppercase tracking-wider inline-block mb-3">
+                  โมดูล 01
+                </div>
                 <h3 className="text-xl font-black text-[var(--ink)] mb-2">
-                  บัตรคำศัพท์ & คลังศัพท์
+                  บัตรคำศัพท์และคลังศัพท์
                 </h3>
                 <p className="text-xs text-[var(--muted)] leading-relaxed">
                   ฝึกเปิดบัตรคำแบบ 3D พลิกดูคำแปล ระบบสุ่มคำ และตารางค้นหาคำศัพท์
@@ -151,18 +155,21 @@ export default function HomeClient({ authPaths, user }: Props) {
                 </p>
               </div>
               <div className="mt-6 flex items-center text-xs font-black text-[var(--red)]">
-                <span>เข้าสู่คลังคำศัพท์ →</span>
+                <span>เข้าสู่คลังคำศัพท์</span>
               </div>
-            </a>
+            </Link>
 
             {/* Card 2: Lessons & Grammar */}
-            <a
+            <Link
               href="/lessons"
               className="p-7 rounded-3xl bg-[var(--paper)] border border-[var(--line)] hover:border-black/40 hover:shadow-lg transition-all flex flex-col justify-between group"
             >
               <div>
+                <div className="px-3 py-1 rounded-full bg-blue-100/80 text-[var(--blue)] text-xs font-bold uppercase tracking-wider inline-block mb-3">
+                  โมดูล 02
+                </div>
                 <h3 className="text-xl font-black text-[var(--ink)] mb-2">
-                  บทเรียน & ไวยากรณ์
+                  บทเรียนและไวยากรณ์
                 </h3>
                 <p className="text-xs text-[var(--muted)] leading-relaxed">
                   สรุปโครงสร้างไวยากรณ์จีน กฎสำคัญ สูตรการสร้างประโยค
@@ -170,16 +177,19 @@ export default function HomeClient({ authPaths, user }: Props) {
                 </p>
               </div>
               <div className="mt-6 flex items-center text-xs font-black text-[var(--blue)]">
-                <span>เข้าสู่หน้าบทเรียน →</span>
+                <span>เข้าสู่หน้าบทเรียน</span>
               </div>
-            </a>
+            </Link>
 
             {/* Card 3: Quizzes */}
-            <a
+            <Link
               href="/quiz"
               className="p-7 rounded-3xl bg-[var(--paper)] border border-[var(--line)] hover:border-black/40 hover:shadow-lg transition-all flex flex-col justify-between group"
             >
               <div>
+                <div className="px-3 py-1 rounded-full bg-amber-100/80 text-amber-800 text-xs font-bold uppercase tracking-wider inline-block mb-3">
+                  โมดูล 03
+                </div>
                 <h3 className="text-xl font-black text-[var(--ink)] mb-2">
                   ศูนย์รวมแบบทดสอบ Quiz
                 </h3>
@@ -189,18 +199,21 @@ export default function HomeClient({ authPaths, user }: Props) {
                 </p>
               </div>
               <div className="mt-6 flex items-center text-xs font-black text-amber-700">
-                <span>เริ่มทำแบบทดสอบ →</span>
+                <span>เริ่มทำแบบทดสอบ</span>
               </div>
-            </a>
+            </Link>
 
             {/* Card 4: Daily Plan & Pomodoro */}
-            <a
+            <Link
               href="/plan"
               className="p-7 rounded-3xl bg-[var(--paper)] border border-[var(--line)] hover:border-black/40 hover:shadow-lg transition-all flex flex-col justify-between group"
             >
               <div>
+                <div className="px-3 py-1 rounded-full bg-teal-100/80 text-[var(--teal)] text-xs font-bold uppercase tracking-wider inline-block mb-3">
+                  โมดูล 04
+                </div>
                 <h3 className="text-xl font-black text-[var(--ink)] mb-2">
-                  แผนอ่าน 25 นาที & ตัวจับเวลา
+                  แผนอ่าน 25 นาทีและตัวจับเวลา
                 </h3>
                 <p className="text-xs text-[var(--muted)] leading-relaxed">
                   ตารางแบ่งเวลาอ่านหนังสือ เช้า-กลางวัน-เย็น
@@ -208,16 +221,19 @@ export default function HomeClient({ authPaths, user }: Props) {
                 </p>
               </div>
               <div className="mt-6 flex items-center text-xs font-black text-[var(--teal)]">
-                <span>ดูแผนอ่าน & จับเวลา →</span>
+                <span>ดูแผนอ่านและจับเวลา</span>
               </div>
-            </a>
+            </Link>
 
             {/* Card 5: Stats & Analytics */}
-            <a
+            <Link
               href="/stats"
               className="p-7 rounded-3xl bg-[var(--paper)] border border-[var(--line)] hover:border-black/40 hover:shadow-lg transition-all flex flex-col justify-between group"
             >
               <div>
+                <div className="px-3 py-1 rounded-full bg-purple-100/80 text-purple-800 text-xs font-bold uppercase tracking-wider inline-block mb-3">
+                  โมดูล 05
+                </div>
                 <h3 className="text-xl font-black text-[var(--ink)] mb-2">
                   สถิติและความคืบหน้า
                 </h3>
@@ -227,9 +243,9 @@ export default function HomeClient({ authPaths, user }: Props) {
                 </p>
               </div>
               <div className="mt-6 flex items-center text-xs font-black text-purple-700">
-                <span>ดูสถิติของคุณ →</span>
+                <span>ดูสถิติของคุณ</span>
               </div>
-            </a>
+            </Link>
           </div>
         </section>
 
@@ -265,18 +281,18 @@ export default function HomeClient({ authPaths, user }: Props) {
                 </div>
 
                 <div className="mt-6 pt-4 border-t border-[var(--line)]/60 flex flex-wrap gap-2">
-                  <a
+                  <Link
                     href={`/vocabulary?level=${lvl.id}`}
                     className="flex-1 py-2 px-3 rounded-xl bg-black/5 hover:bg-black/10 text-[var(--ink)] text-xs font-bold text-center transition-colors"
                   >
                     บัตรคำ
-                  </a>
-                  <a
+                  </Link>
+                  <Link
                     href={`/quiz?level=${lvl.id}`}
                     className="flex-1 py-2 px-3 rounded-xl bg-black/5 hover:bg-black/10 text-[var(--ink)] text-xs font-bold text-center transition-colors"
                   >
-                    Quiz
-                  </a>
+                    แบบทดสอบ
+                  </Link>
                 </div>
               </div>
             ))}

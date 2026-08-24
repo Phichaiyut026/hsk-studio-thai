@@ -1,4 +1,5 @@
 import { getDevAuthCookieNames } from "../chatgpt-auth";
+import { authenticateUser } from "../../lib/hsk-db";
 
 export async function GET(request: Request) {
   const returnTo = safeReturnTo(new URL(request.url).searchParams.get("return_to"));
@@ -12,15 +13,24 @@ export async function POST(request: Request) {
   const returnTo = safeReturnTo(String(formData.get("return_to") ?? "/"));
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const displayName = String(formData.get("display_name") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
 
-  if (!isValidEmail(email)) {
-    return new Response(renderLoginPage(returnTo, "กรุณากรอกอีเมลให้ถูกต้อง", displayName, email), {
+  if (!isValidEmail(email) || password.length < 6) {
+    return new Response(renderLoginPage(returnTo, "กรุณากรอกอีเมลให้ถูกต้อง และรหัสผ่านอย่างน้อย 6 ตัวอักษร", displayName, email), {
       status: 400,
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
   }
 
-  const finalDisplayName = displayName || email.split("@")[0] || "HSK learner";
+  const account = await authenticateUser(email, password);
+  if (!account) {
+    return new Response(renderLoginPage(returnTo, "อีเมลหรือรหัสผ่านไม่ถูกต้อง", displayName, email), {
+      status: 401,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
+  }
+
+  const finalDisplayName = account.displayName || displayName || email.split("@")[0] || "HSK learner";
   const headers = new Headers({ Location: returnTo });
   setAuthCookies(headers, request.url, email, finalDisplayName);
 
@@ -71,7 +81,7 @@ function renderLoginPage(returnTo: string, error = "", displayName = "", email =
     </a>
     <form method="post" action="/login">
       <h1>เข้าสู่ระบบ</h1>
-      <p>กรอกชื่อและอีเมลเพื่อบันทึกความคืบหน้า แบบทดสอบ และสถิติการเรียนของคุณ</p>
+      <p>เข้าสู่ระบบเพื่อบันทึกความคืบหน้า แบบทดสอบ และสถิติการเรียนของคุณ</p>
       <input type="hidden" name="return_to" value="${escapeHtml(returnTo)}" />
       <label>
         ชื่อผู้ใช้
@@ -81,9 +91,14 @@ function renderLoginPage(returnTo: string, error = "", displayName = "", email =
         อีเมล
         <input name="email" type="email" autocomplete="email" required value="${escapeHtml(email)}" placeholder="you@example.com" />
       </label>
+      <label>
+        รหัสผ่าน
+        <input name="password" type="password" autocomplete="current-password" minlength="6" required placeholder="อย่างน้อย 6 ตัวอักษร" />
+      </label>
       ${error ? `<div class="error">${escapeHtml(error)}</div>` : ""}
       <button type="submit">เข้าสู่ระบบ</button>
     </form>
+    <a class="back" href="/register?return_to=${encodeURIComponent(returnTo)}">ยังไม่มีบัญชี? สมัครสมาชิก</a>
     <a class="back" href="/">กลับหน้าแรก</a>
   </main>
 </body>

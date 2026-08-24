@@ -163,7 +163,7 @@ export default function LessonsClient({ authPaths, user }: Props) {
                             </div>
                             <SpeakButton
                               text={line.hanzi}
-                              label=""
+                              label="ฟัง"
                               className="p-1.5 text-xs bg-white"
                             />
                           </div>
@@ -204,7 +204,7 @@ export default function LessonsClient({ authPaths, user }: Props) {
                         </span>
                         <SpeakButton
                           text={phrase.hanzi}
-                          label=""
+                          label="ฟัง"
                           className="p-1 text-xs"
                         />
                       </div>

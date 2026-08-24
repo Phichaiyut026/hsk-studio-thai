@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
@@ -20,69 +21,62 @@ export default function Navbar({ authPaths, user }: NavbarProps) {
 
   const navItems = [
     { href: "/", label: "หน้าแรก" },
-    { href: "/vocabulary", label: "คำศัพท์" },
-    { href: "/lessons", label: "บทเรียน" },
+    { href: "/vocabulary", label: "บัตรคำ & คลังศัพท์" },
+    { href: "/lessons", label: "บทเรียน & ไวยากรณ์" },
     { href: "/quiz", label: "แบบทดสอบ" },
-    { href: "/plan", label: "แผนเรียน" },
-    { href: "/stats", label: "สถิติ" },
+    { href: "/plan", label: "แผนเรียน & จับเวลา" },
+    { href: "/stats", label: "สถิติ & ความคืบหน้า" },
+    { href: "/admin", label: "Dashboard" },
   ];
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-[var(--paper)]/90 backdrop-blur-md border-b border-[var(--line)] shadow-xs">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+    <header className="site-navbar">
+      <div className="site-navbar-inner">
+        <div className="site-navbar-row">
           {/* Brand Logo */}
-          <a href="/" className="flex items-center gap-3 group">
-            <span className="w-10 h-10 rounded-lg bg-[var(--ink)] text-[var(--paper)] flex items-center justify-center font-bold text-xl shadow-xs group-hover:scale-105 transition-transform">
+          <Link href="/" className="site-navbar-brand">
+            <span className="site-navbar-mark">
               汉
             </span>
-            <div className="flex flex-col">
-              <span className="font-black text-lg tracking-tight text-[var(--ink)] leading-none">
+            <span className="site-navbar-brand-copy">
+              <span className="site-navbar-title">
                 HSK Studio
               </span>
-              <span className="text-[10px] font-semibold text-[var(--muted)] tracking-wider uppercase">
+              <span className="site-navbar-subtitle">
                 เรียนจีนสำหรับคนไทย
               </span>
-            </div>
-          </a>
+            </span>
+          </Link>
 
           {/* Desktop Nav Items */}
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="site-navbar-menu">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
               return (
-                <a
+                <Link
                   key={item.href}
                   href={item.href}
-                  className={`px-3 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5 ${
-                    isActive
-                      ? "bg-[var(--ink)] text-white shadow-xs"
-                      : "text-[var(--ink)] hover:bg-black/5 hover:text-black"
-                  }`}
+                  target={item.href === "/admin" ? "_blank" : undefined}
+                  rel={item.href === "/admin" ? "noreferrer" : undefined}
+                  className={`site-navbar-item ${isActive ? "is-active" : ""}`}
                 >
-                  <span>{item.label}</span>
-                </a>
+                  {item.label}
+                </Link>
               );
             })}
           </nav>
 
           {/* Account / Actions */}
-          <div className="hidden md:flex items-center gap-2">
+          <div className="site-navbar-account">
             {user ? (
               <div className="flex items-center gap-2">
-                <a
-                  href="/admin"
-                  className="px-3 py-1.5 text-xs font-bold text-[var(--ink)] bg-[var(--paper)] hover:bg-black/5 border border-[var(--line)] rounded-lg transition-all"
-                >
-                  Dashboard
-                </a>
-                <span className="px-3 py-1.5 text-xs font-bold text-[var(--ink)] bg-black/5 border border-[var(--line)] rounded-lg truncate max-w-[160px]">
-                  👤 {user.displayName}
+                <span className="site-navbar-user">
+                  {user.displayName}
                 </span>
                 {authPaths?.signOut && (
                   <a
                     href={authPaths.signOut}
-                    className="px-3 py-1.5 text-xs font-bold text-[var(--red)] hover:bg-red-50 border border-transparent hover:border-red-200 rounded-lg transition-all"
+                    className="site-navbar-auth"
                   >
                     ออกจากระบบ
                   </a>
@@ -91,7 +85,7 @@ export default function Navbar({ authPaths, user }: NavbarProps) {
             ) : authPaths?.signIn ? (
               <a
                 href={authPaths.signIn}
-                className="px-4 py-2 text-xs font-bold text-white bg-[var(--red)] hover:opacity-90 rounded-lg transition-all shadow-xs"
+                className="site-navbar-login"
               >
                 เข้าสู่ระบบ
               </a>
@@ -102,48 +96,43 @@ export default function Navbar({ authPaths, user }: NavbarProps) {
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-lg text-[var(--ink)] hover:bg-black/5"
+            className="site-navbar-menu-button"
             aria-label="เปิดเมนู"
           >
-            {mobileMenuOpen ? "ปิด" : "เมนู"}
+            {mobileMenuOpen ? "ปิดเมนู" : "เมนู"}
           </button>
         </div>
       </div>
 
       {/* Mobile dropdown */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-[var(--line)] bg-[var(--paper)] px-4 pt-2 pb-4 space-y-1 shadow-lg">
+        <div className="site-navbar-mobile">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             return (
-              <a
+              <Link
                 key={item.href}
                 href={item.href}
+                target={item.href === "/admin" ? "_blank" : undefined}
+                rel={item.href === "/admin" ? "noreferrer" : undefined}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold ${
-                  isActive
-                    ? "bg-[var(--ink)] text-white"
-                    : "text-[var(--ink)] hover:bg-black/5"
-                }`}
+                className={`site-navbar-mobile-item ${isActive ? "is-active" : ""}`}
               >
-                <span className="text-base">{item.icon}</span>
-                <span>{item.label}</span>
-              </a>
+                {item.label}
+              </Link>
             );
           })}
-          <div className="pt-3 mt-2 border-t border-[var(--line)]">
+          <div className="site-navbar-mobile-account">
             {user ? (
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <a href="/admin" className="text-xs font-bold text-[var(--ink)]">
-                    Dashboard
-                  </a>
-                  <span className="text-xs font-bold text-[var(--muted)]">
-                    {user.displayName}
-                  </span>
-                </div>
+                <span className="text-xs font-bold text-[var(--muted)]">
+                  {user.displayName}
+                </span>
                 {authPaths?.signOut && (
-                  <a href={authPaths.signOut} className="text-xs font-bold text-[var(--red)]">
+                  <a
+                    href={authPaths.signOut}
+                    className="text-xs font-bold text-[var(--red)]"
+                  >
                     ออกจากระบบ
                   </a>
                 )}

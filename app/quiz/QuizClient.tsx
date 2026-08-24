@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { hskLevels, type QuizItem } from "../../lib/hsk-data";
@@ -253,7 +254,8 @@ export default function QuizClient({ authPaths, user }: Props) {
                       className={`p-4 rounded-2xl border text-left text-base font-bold transition-all shadow-xs flex items-center justify-between ${btnStyle}`}
                     >
                       <span>{choice}</span>
-                      {isAnswerSubmitted && isSelected && !isCorrect && <span>❌</span>}
+                      {isAnswerSubmitted && isCorrect && <span className="text-xs font-bold text-green-800">ถูกต้อง</span>}
+                      {isAnswerSubmitted && isSelected && !isCorrect && <span className="text-xs font-bold text-red-800">ยังไม่ถูก</span>}
                     </button>
                   );
                 })}
@@ -271,8 +273,8 @@ export default function QuizClient({ authPaths, user }: Props) {
                   <div className="flex items-center gap-2 font-black text-base">
                     <span>
                       {selectedAnswer === currentQuestion.answer
-                        ? "🎉 ถูกต้องแล้ว!"
-                        : "❌ ยังไม่ถูกต้อง"}
+                        ? "ถูกต้องแล้ว"
+                        : "ยังไม่ถูกต้อง"}
                     </span>
                   </div>
                   {currentQuestion.explanation && (
@@ -303,8 +305,8 @@ export default function QuizClient({ authPaths, user }: Props) {
                   >
                     <span>
                       {questionIndex + 1 < questionsList.length
-                        ? "ข้อถัดไป →"
-                        : "ดูผลคะแนนรวม 🎉"}
+                        ? "ข้อถัดไป"
+                        : "ดูผลคะแนนรวม"}
                     </span>
                   </button>
                 </div>
@@ -313,22 +315,19 @@ export default function QuizClient({ authPaths, user }: Props) {
           ) : (
             /* Quiz Completed Result Screen */
             <div className="p-8 sm:p-12 rounded-3xl bg-[var(--paper)] border border-[var(--line)] shadow-xl text-center space-y-6">
-              <div className="w-20 h-20 rounded-full bg-amber-100 text-4xl flex items-center justify-center mx-auto shadow-inner">
-                🏆
-              </div>
               <div className="space-y-2">
                 <span className="text-xs font-black uppercase tracking-wider text-[var(--muted)]">
-                  ทำแบบทดสอบ {activeLevel.title} เสร็จสิ้น!
+                  ทำแบบทดสอบ {activeLevel.title} เสร็จสิ้น
                 </span>
                 <h2 className="text-3xl sm:text-4xl font-black text-[var(--ink)]">
                   คะแนนของคุณ: {score} / {questionsList.length}
                 </h2>
                 <p className="text-base text-[var(--muted)] font-medium max-w-md mx-auto">
                   {score === questionsList.length
-                    ? "🌟 ยอดเยี่ยมมาก! คุณทำถูกต้องครบทุกข้อ พร้อมลุยระดับถัดไปแล้ว"
+                    ? "ยอดเยี่ยมมาก คุณทำถูกต้องครบทุกข้อ พร้อมลุยระดับถัดไปแล้ว"
                     : score >= questionsList.length / 2
-                    ? "👍 ทำได้ดีมาก! ลองทบทวนจุดที่ผิดและฝึกซ้ำอีกรอบเพื่อความแม่นยำ"
-                    : "💪 อย่ายอมแพ้! กลับไปทบทวนบัตรคำและบทเรียน แล้วลองทำใหม่อีกครั้งนะ"}
+                    ? "ทำได้ดีมาก ลองทบทวนจุดที่ผิดและฝึกซ้ำอีกรอบเพื่อความแม่นยำ"
+                    : "กลับไปทบทวนบัตรคำและบทเรียน แล้วลองทำใหม่อีกครั้งนะ"}
                 </p>
               </div>
 
@@ -338,14 +337,14 @@ export default function QuizClient({ authPaths, user }: Props) {
                   onClick={handleRestart}
                   className="px-6 py-3 rounded-xl bg-[var(--ink)] hover:bg-black text-white font-bold text-sm shadow-md transition-transform active:scale-95"
                 >
-                  🔄 ทำแบบทดสอบชุดนี้ใหม่
+                  ทำแบบทดสอบชุดนี้ใหม่
                 </button>
-                <a
+                <Link
                   href="/vocabulary"
                   className="px-6 py-3 rounded-xl bg-white border border-[var(--line)] hover:bg-gray-50 text-[var(--ink)] font-bold text-sm shadow-xs transition-transform active:scale-95"
                 >
                   ไปทบทวนบัตรคำศัพท์
-                </a>
+                </Link>
               </div>
             </div>
           )}

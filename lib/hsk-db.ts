@@ -3,6 +3,7 @@ import { env } from "cloudflare:workers";
 import { getDb } from "../db";
 import { quizAttempts, quizQuestions, users, vocabulary } from "../db/schema";
 import { hskLevels, type Level } from "./hsk-data";
+import { hashPassword, verifyPassword } from "./password";
 
 export type AppRole = "user" | "admin";
 
@@ -96,6 +97,7 @@ async function ensureHskSchema() {
         user_id text PRIMARY KEY NOT NULL,
         email text NOT NULL,
         display_name text NOT NULL,
+        password_hash text,
         role text DEFAULT 'user' NOT NULL CHECK (role IN ('user', 'admin')),
         created_at text DEFAULT CURRENT_TIMESTAMP NOT NULL,
         updated_at text DEFAULT CURRENT_TIMESTAMP NOT NULL
@@ -144,6 +146,12 @@ async function ensureHskSchema() {
       )`,
     ),
   ]);
+
+  try {
+    await d1.prepare("ALTER TABLE users ADD COLUMN password_hash text").run();
+  } catch {
+    // Existing databases may already have this column.
+  }
 
   try {
     await d1.prepare("ALTER TABLE quiz_attempts ADD COLUMN user_id text").run();
@@ -209,6 +217,46 @@ export async function ensureUserProfile(input: {
   };
 }
 
+export async function registerUser(input: { email: string; displayName: string; password: string; role?: AppRole }) {
+  await ensureHskSchema();
+  const d1 = env.DB;
+  const email = input.email.trim().toLowerCase();
+  const existing = await d1.prepare("SELECT user_id, password_hash, role FROM users WHERE lower(email) = ? LIMIT 1").bind(email).first<{ user_id: string; password_hash: string | null; role: AppRole }>();
+  if (existing?.password_hash) throw new Error("อีเมลนี้มีบัญชีอยู่แล้ว");
+
+  const countRow = await d1.prepare("SELECT COUNT(*) as total FROM users").first<{ total: number }>();
+  const adminEmail = ((env as unknown as { ADMIN_EMAIL?: string }).ADMIN_EMAIL ?? "").trim().toLowerCase();
+  const role = input.role ?? (Number(countRow?.total ?? 0) === 0 || email === adminEmail ? "admin" : "user");
+  const userId = existing?.user_id ?? `email:${email}`;
+  const passwordHash = await hashPassword(input.password);
+  if (existing) {
+    await d1.prepare("UPDATE users SET display_name = ?, password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?")
+      .bind(input.displayName.trim() || email.split("@")[0], passwordHash, userId).run();
+  } else {
+    await d1.prepare(
+      `INSERT INTO users (user_id, email, display_name, password_hash, role)
+       VALUES (?, ?, ?, ?, ?)`,
+    ).bind(userId, email, input.displayName.trim() || email.split("@")[0], passwordHash, role).run();
+  }
+  return { userId, email, displayName: input.displayName.trim() || email.split("@")[0], role: existing?.role ?? role };
+}
+
+export async function authenticateUser(emailInput: string, password: string) {
+  await ensureHskSchema();
+  const d1 = env.DB;
+  const email = emailInput.trim().toLowerCase();
+  const row = await d1.prepare(
+    "SELECT user_id, email, display_name, role, password_hash FROM users WHERE lower(email) = ? LIMIT 1",
+  ).bind(email).first<{ user_id: string; email: string; display_name: string; role: AppRole; password_hash: string | null }>();
+  if (!row) return null;
+
+  if (row.password_hash) {
+    if (!(await verifyPassword(password, row.password_hash))) return null;
+  } else return null;
+
+  return { userId: row.user_id, email: row.email, displayName: row.display_name, role: row.role };
+}
+
 export async function listUsers() {
   await ensureHskSchema();
   const db = getDb();
@@ -219,6 +267,90 @@ export async function listUsers() {
     role: users.role,
     createdAt: users.createdAt,
   }).from(users).orderBy(users.createdAt);
+}
+
+export async function addVocabularyWord(input: {
+  levelId: string;
+  hanzi: string;
+  pinyin: string;
+  thai: string;
+  example: string;
+}) {
+  await ensureHskSchema();
+  const d1 = env.DB;
+  const positionRow = await d1
+    .prepare("SELECT COALESCE(MAX(position), -1) + 1 as next_position FROM vocabulary WHERE level_id = ?")
+    .bind(input.levelId)
+    .first<{ next_position: number }>();
+  const id = `admin-${input.levelId}-${crypto.randomUUID()}`;
+
+  await d1
+    .prepare(
+      `INSERT INTO vocabulary (id, level_id, hanzi, pinyin, thai, example, position)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(
+      id,
+      input.levelId,
+      input.hanzi,
+      input.pinyin,
+      input.thai,
+      input.example,
+      Number(positionRow?.next_position ?? 0),
+    )
+    .run();
+
+  return { id };
+}
+
+export async function listVocabulary() {
+  await ensureHskSchema();
+  const d1 = env.DB;
+  const result = await d1
+    .prepare(
+      `SELECT id, level_id, hanzi, pinyin, thai, example, position, created_at
+       FROM vocabulary ORDER BY level_id, position, created_at DESC`,
+    )
+    .all<{
+      id: string;
+      level_id: string;
+      hanzi: string;
+      pinyin: string;
+      thai: string;
+      example: string;
+      position: number;
+      created_at: string;
+    }>();
+
+  return result.results.map((word) => ({
+    id: word.id,
+    levelId: word.level_id,
+    hanzi: word.hanzi,
+    pinyin: word.pinyin,
+    thai: word.thai,
+    example: word.example,
+    position: word.position,
+    createdAt: word.created_at,
+  }));
+}
+
+export async function updateVocabularyWord(id: string, input: {
+  levelId: string;
+  hanzi: string;
+  pinyin: string;
+  thai: string;
+  example: string;
+}) {
+  await ensureHskSchema();
+  const d1 = env.DB;
+  await d1.prepare(
+    `UPDATE vocabulary SET level_id = ?, hanzi = ?, pinyin = ?, thai = ?, example = ? WHERE id = ?`,
+  ).bind(input.levelId, input.hanzi, input.pinyin, input.thai, input.example, id).run();
+}
+
+export async function deleteVocabularyWord(id: string) {
+  await ensureHskSchema();
+  await env.DB.prepare("DELETE FROM vocabulary WHERE id = ?").bind(id).run();
 }
 
 export async function updateUserRole(userId: string, role: AppRole) {

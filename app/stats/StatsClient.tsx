@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { hskLevels } from "../../lib/hsk-data";
@@ -118,7 +119,7 @@ export default function StatsClient({ authPaths, user }: Props) {
               </div>
               <p className="text-xs text-gray-500 mt-2">
                 {accuracyPercent >= 80
-                  ? "🔥 ยอดเยี่ยมมาก อยู่ในเกณฑ์ผ่านฉลุย"
+                  ? "ยอดเยี่ยมมาก อยู่ในเกณฑ์ผ่านฉลุย"
                   : "ฝึกทำข้อสอบเพิ่มเติมเพื่อเพิ่มเปอร์เซ็นต์"}
               </p>
             </div>
@@ -226,12 +227,12 @@ export default function StatsClient({ authPaths, user }: Props) {
                       <span className="text-[var(--muted)] font-semibold">
                         จำได้ {masteredInThisLevel} / {levelWordsCount} คำในระบบ
                       </span>
-                      <a
+                      <Link
                         href={`/vocabulary?level=${lvl.id}`}
                         className="font-bold text-[var(--ink)] hover:underline"
                       >
-                        ทบทวนศัพท์ →
-                      </a>
+                        ทบทวนศัพท์
+                      </Link>
                     </div>
                   </div>
                 );
@@ -248,18 +249,18 @@ export default function StatsClient({ authPaths, user }: Props) {
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <a
+              <Link
                 href="/vocabulary"
                 className="px-5 py-2.5 rounded-xl bg-white text-gray-900 font-black text-sm shadow-md hover:bg-gray-100 transition-all"
               >
                 ทบทวนบัตรคำ
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/quiz"
                 className="px-5 py-2.5 rounded-xl bg-[var(--red)] text-white font-black text-sm shadow-md hover:opacity-90 transition-all"
               >
                 ทำแบบทดสอบ
-              </a>
+              </Link>
             </div>
           </div>
         </main>

@@ -141,7 +141,6 @@ export default function PlanClient({ authPaths, user }: Props) {
               <div className="p-6 sm:p-8 rounded-3xl bg-[var(--paper)] border border-[var(--line)] shadow-xs space-y-6">
                 <div className="flex items-center justify-between">
                   <h2 className="text-xl font-black text-[var(--ink)] flex items-center gap-2">
-                    <span>📅</span>
                     <span>ตารางแบ่งเวลา 25 นาทีต่อวัน (ไม่ฝืน)</span>
                   </h2>
                 </div>
@@ -150,7 +149,7 @@ export default function PlanClient({ authPaths, user }: Props) {
                   <div className="p-5 rounded-2xl bg-amber-50/70 border border-amber-200/80 flex flex-col justify-between">
                     <div>
                       <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">
-                        🌅 ช่วงเช้า (8 นาที)
+                        ช่วงเช้า (8 นาที)
                       </span>
                       <h3 className="text-base font-black text-amber-950 mt-2">
                         เปิดบัตรคำ & ฟังเสียง
@@ -184,7 +183,7 @@ export default function PlanClient({ authPaths, user }: Props) {
                   <div className="p-5 rounded-2xl bg-blue-50/70 border border-blue-200/80 flex flex-col justify-between">
                     <div>
                       <span className="text-xs font-bold text-[var(--blue)] uppercase tracking-wider">
-                        🌙 ช่วงเย็น (10 นาที)
+                        ช่วงเย็น (10 นาที)
                       </span>
                       <h3 className="text-base font-black text-blue-950 mt-2">
                         ทำ Quiz & เช็คจุดผิด
@@ -256,7 +255,7 @@ export default function PlanClient({ authPaths, user }: Props) {
                         </span>
                         {isChecked && (
                           <span className="text-xs font-black text-[var(--teal)]">
-                            สำเร็จ 🎉
+                            สำเร็จ
                           </span>
                         )}
                       </label>
@@ -305,7 +304,7 @@ export default function PlanClient({ authPaths, user }: Props) {
               </div>
             </div>
 
-            {/* Right Column: Focus Timer & Progress Ring */}
+            {/* Right Column: Focus Timer */}
             <div className="space-y-6">
               {/* Pomodoro Timer */}
               <div className="p-6 sm:p-8 rounded-3xl bg-[var(--paper)] border border-[var(--line)] shadow-md text-center space-y-6">
@@ -340,7 +339,7 @@ export default function PlanClient({ authPaths, user }: Props) {
                         : "text-[var(--muted)]"
                     }`}
                   >
-                    ☕ พัก 5 นาที
+                    พัก 5 นาที
                   </button>
                 </div>
 
@@ -352,10 +351,10 @@ export default function PlanClient({ authPaths, user }: Props) {
                   <p className="text-xs text-[var(--muted)] font-semibold mt-2">
                     {isTimerRunning
                       ? timerMode === "focus"
-                        ? "🔥 กำลังโฟกัสการฝึกภาษาจีน..."
-                        : "🌿 กำลังพักสายตา..."
+                        ? "กำลังโฟกัสการฝึกภาษาจีน..."
+                        : "กำลังพักสายตา..."
                       : timerSeconds === 0
-                      ? "🎉 ครบเวลาแล้ว!"
+                      ? "ครบเวลาแล้ว"
                       : "กดเริ่มเมื่อพร้อม"}
                   </p>
                 </div>
@@ -381,7 +380,7 @@ export default function PlanClient({ authPaths, user }: Props) {
                     }}
                     className="px-4 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-[var(--ink)] font-bold text-sm transition-colors"
                   >
-                    🔄 รีเซ็ต
+                    รีเซ็ต
                   </button>
                 </div>
               </div>
