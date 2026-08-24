@@ -31,6 +31,8 @@ export type SystemOverview = {
   };
 };
 
+let schemaReady: Promise<void> | null = null;
+
 export async function ensureHskSeedData() {
   await ensureHskSchema();
 
@@ -110,6 +112,16 @@ export async function ensureHskSeedData() {
 }
 
 async function ensureHskSchema() {
+  if (!schemaReady) {
+    schemaReady = initializeHskSchema().catch((error) => {
+      schemaReady = null;
+      throw error;
+    });
+  }
+  return schemaReady;
+}
+
+async function initializeHskSchema() {
   const d1 = env.DB;
   if (!d1) {
     throw new Error("Cloudflare D1 binding `DB` is unavailable.");
@@ -532,8 +544,8 @@ export async function syncHuggingFaceHskVocabulary() {
 
   const validRows = importedRows.filter((row) => Number(row.level) >= 1 && Number(row.level) <= 6 && row.hanzi?.trim());
   const d1 = env.DB;
-  for (let index = 0; index < validRows.length; index += 50) {
-    const batch = validRows.slice(index, index + 50).map((row) => {
+  for (let index = 0; index < validRows.length; index += 100) {
+    const batch = validRows.slice(index, index + 100).map((row, rowIndex) => {
       const level = Number(row.level);
       const hanzi = row.hanzi!.trim();
       const english = row.english?.trim() ?? "";
@@ -557,7 +569,7 @@ export async function syncHuggingFaceHskVocabulary() {
         row.pos?.trim() || null,
         row.tts_url?.trim() || null,
         "huggingface:willfliaw/hsk-dataset",
-        index + validRows.indexOf(row),
+        index + rowIndex,
       );
     });
     await d1.batch(batch);

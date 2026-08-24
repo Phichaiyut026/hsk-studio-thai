@@ -133,7 +133,6 @@ export default function AdminClient({
     const data = (await response.json().catch(() => ({}))) as { result?: { imported?: number }; error?: string; overview?: SystemOverview };
     if (response.ok) {
       if (data.overview) setOverview(data.overview);
-      await loadVocabulary();
       setMessage(`นำเข้าคำศัพท์ HSK สำเร็จ ${data.result?.imported ?? 0} รายการ`);
     } else {
       setMessage(data.error ?? "ดึงข้อมูลจาก Hugging Face ไม่สำเร็จ");
