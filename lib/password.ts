@@ -21,7 +21,7 @@ export async function verifyPassword(password: string, stored: string) {
 
 async function derive(password: string, salt: Uint8Array) {
   const key = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]);
-  return crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: 120000, hash: "SHA-256" }, key, 256);
+  return crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" }, key, 256);
 }
 
 function toHex(bytes: Uint8Array) {
