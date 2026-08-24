@@ -22,6 +22,7 @@ export default function VocabularyClient({ authPaths, user, isAdmin }: Props) {
   const [levels, setLevels] = useState(hskLevels);
   const [selectedLevelId, setSelectedLevelId] = useState<string>("hsk1");
   const [mode, setMode] = useState<"flashcard" | "list">("flashcard");
+  const [listPage, setListPage] = useState(1);
   const [cardIndex, setCardIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -74,6 +75,18 @@ export default function VocabularyClient({ authPaths, user, isAdmin }: Props) {
       return matchesSearch && matchesCat;
     });
   }, [wordsForLevel, searchQuery, selectedCategory]);
+
+  const listPageSize = 36;
+  const listTotalPages = Math.max(1, Math.ceil(filteredWords.length / listPageSize));
+  const visibleWords = filteredWords.slice((listPage - 1) * listPageSize, listPage * listPageSize);
+
+  useEffect(() => {
+    setListPage(1);
+  }, [selectedLevelId, searchQuery, selectedCategory]);
+
+  useEffect(() => {
+    if (listPage > listTotalPages) setListPage(listTotalPages);
+  }, [listPage, listTotalPages]);
 
   const activeWord: VocabWord | undefined = filteredWords[cardIndex] || filteredWords[0];
 
@@ -425,7 +438,7 @@ export default function VocabularyClient({ authPaths, user, isAdmin }: Props) {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredWords.map((word) => {
+                {visibleWords.map((word) => {
                   const isMastered = masteredWords.includes(word.id);
                   return (
                     <div
@@ -481,6 +494,14 @@ export default function VocabularyClient({ authPaths, user, isAdmin }: Props) {
                     </div>
                   );
                 })}
+              </div>
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 text-sm font-bold text-[var(--muted)]">
+                <span>แสดง {visibleWords.length} จาก {filteredWords.length.toLocaleString("th-TH")} คำ</span>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => setListPage((current) => Math.max(1, current - 1))} disabled={listPage === 1} className="px-3 py-2 rounded-lg border border-[var(--line)] bg-[var(--paper)] disabled:opacity-40">ก่อนหน้า</button>
+                  <span>หน้า {listPage} / {listTotalPages}</span>
+                  <button type="button" onClick={() => setListPage((current) => Math.min(listTotalPages, current + 1))} disabled={listPage === listTotalPages} className="px-3 py-2 rounded-lg border border-[var(--line)] bg-[var(--paper)] disabled:opacity-40">ถัดไป</button>
+                </div>
               </div>
             </div>
           )}
