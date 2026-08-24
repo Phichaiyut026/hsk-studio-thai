@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
@@ -33,7 +32,7 @@ export default function Navbar({ authPaths, user }: NavbarProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Brand Logo */}
-          <Link href="/" className="flex items-center gap-3 group">
+          <a href="/" className="flex items-center gap-3 group">
             <span className="w-10 h-10 rounded-lg bg-[var(--ink)] text-[var(--paper)] flex items-center justify-center font-bold text-xl shadow-xs group-hover:scale-105 transition-transform">
               汉
             </span>
@@ -45,14 +44,14 @@ export default function Navbar({ authPaths, user }: NavbarProps) {
                 เรียนจีนสำหรับคนไทย
               </span>
             </div>
-          </Link>
+          </a>
 
           {/* Desktop Nav Items */}
           <nav className="hidden md:flex items-center gap-1">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
               return (
-                <Link
+                <a
                   key={item.href}
                   href={item.href}
                   className={`px-3 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5 ${
@@ -62,7 +61,7 @@ export default function Navbar({ authPaths, user }: NavbarProps) {
                   }`}
                 >
                   <span>{item.label}</span>
-                </Link>
+                </a>
               );
             })}
           </nav>
@@ -111,7 +110,7 @@ export default function Navbar({ authPaths, user }: NavbarProps) {
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             return (
-              <Link
+              <a
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
@@ -123,7 +122,7 @@ export default function Navbar({ authPaths, user }: NavbarProps) {
               >
                 <span className="text-base">{item.icon}</span>
                 <span>{item.label}</span>
-              </Link>
+              </a>
             );
           })}
           <div className="pt-3 mt-2 border-t border-[var(--line)]">

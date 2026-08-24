@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { getAuthPaths, getChatGPTUser } from "../chatgpt-auth";
 import { ensureUserProfile } from "../../lib/hsk-db";
 import AdminClient from "./AdminClient";
@@ -27,7 +26,7 @@ export default async function AdminPage() {
         <p className="eyebrow">403</p>
         <h1>ไม่มีสิทธิ์เข้าถึงหน้านี้</h1>
         <p>บัญชีของคุณเป็น User จึงยังไม่สามารถจัดการระบบได้</p>
-        <Link className="secondary-action" href="/">กลับหน้าแรก</Link>
+        <a className="secondary-action" href="/">กลับหน้าแรก</a>
       </main>
     );
   }

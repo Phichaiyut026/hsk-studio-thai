@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
@@ -48,7 +47,7 @@ export default function AdminClient({ authPaths, user }: { authPaths: { signIn: 
               <h1>ผู้ใช้และสิทธิ์</h1>
               <p>กำหนดว่าใครเป็น User และใครเป็น Admin ของ HSK Studio</p>
             </div>
-            <Link href="/" className="secondary-action">กลับหน้าเรียน</Link>
+            <a href="/" className="secondary-action">กลับหน้าเรียน</a>
           </div>
           <div className="admin-note">Admin ตรวจสิทธิ์ที่ฝั่งเซิร์ฟเวอร์ทุกครั้ง และไม่สามารถเปลี่ยน role ของตัวเองได้</div>
           <div className="admin-table-wrap">

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { hskLevels } from "../../lib/hsk-data";
@@ -227,12 +226,12 @@ export default function StatsClient({ authPaths, user }: Props) {
                       <span className="text-[var(--muted)] font-semibold">
                         จำได้ {masteredInThisLevel} / {levelWordsCount} คำในระบบ
                       </span>
-                      <Link
+                      <a
                         href={`/vocabulary?level=${lvl.id}`}
                         className="font-bold text-[var(--ink)] hover:underline"
                       >
                         ทบทวนศัพท์ →
-                      </Link>
+                      </a>
                     </div>
                   </div>
                 );
@@ -249,18 +248,18 @@ export default function StatsClient({ authPaths, user }: Props) {
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Link
+              <a
                 href="/vocabulary"
                 className="px-5 py-2.5 rounded-xl bg-white text-gray-900 font-black text-sm shadow-md hover:bg-gray-100 transition-all"
               >
                 ทบทวนบัตรคำ
-              </Link>
-              <Link
+              </a>
+              <a
                 href="/quiz"
                 className="px-5 py-2.5 rounded-xl bg-[var(--red)] text-white font-black text-sm shadow-md hover:opacity-90 transition-all"
               >
                 ทำแบบทดสอบ
-              </Link>
+              </a>
             </div>
           </div>
         </main>

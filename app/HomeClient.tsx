@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import SpeakButton from "./components/SpeakButton";
@@ -59,15 +58,15 @@ export default function HomeClient({ authPaths, user }: Props) {
                 นาทีต่อวัน
               </p>
               <div className="hero-actions">
-                <Link href="/vocabulary" className="primary-action">
+                <a href="/vocabulary" className="primary-action">
                   เริ่มฝึกบัตรคำศัพท์
-                </Link>
-                <Link href="/lessons" className="secondary-action">
+                </a>
+                <a href="/lessons" className="secondary-action">
                   ดูบทเรียน & ไวยากรณ์
-                </Link>
-                <Link href="/quiz" className="secondary-action">
+                </a>
+                <a href="/quiz" className="secondary-action">
                   ทำแบบทดสอบ
-                </Link>
+                </a>
               </div>
             </div>
 
@@ -138,7 +137,7 @@ export default function HomeClient({ authPaths, user }: Props) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Card 1: Vocabulary & Flashcards */}
-            <Link
+            <a
               href="/vocabulary"
               className="p-7 rounded-3xl bg-[var(--paper)] border border-[var(--line)] hover:border-black/40 hover:shadow-lg transition-all flex flex-col justify-between group"
             >
@@ -154,10 +153,10 @@ export default function HomeClient({ authPaths, user }: Props) {
               <div className="mt-6 flex items-center text-xs font-black text-[var(--red)]">
                 <span>เข้าสู่คลังคำศัพท์ →</span>
               </div>
-            </Link>
+            </a>
 
             {/* Card 2: Lessons & Grammar */}
-            <Link
+            <a
               href="/lessons"
               className="p-7 rounded-3xl bg-[var(--paper)] border border-[var(--line)] hover:border-black/40 hover:shadow-lg transition-all flex flex-col justify-between group"
             >
@@ -173,10 +172,10 @@ export default function HomeClient({ authPaths, user }: Props) {
               <div className="mt-6 flex items-center text-xs font-black text-[var(--blue)]">
                 <span>เข้าสู่หน้าบทเรียน →</span>
               </div>
-            </Link>
+            </a>
 
             {/* Card 3: Quizzes */}
-            <Link
+            <a
               href="/quiz"
               className="p-7 rounded-3xl bg-[var(--paper)] border border-[var(--line)] hover:border-black/40 hover:shadow-lg transition-all flex flex-col justify-between group"
             >
@@ -192,10 +191,10 @@ export default function HomeClient({ authPaths, user }: Props) {
               <div className="mt-6 flex items-center text-xs font-black text-amber-700">
                 <span>เริ่มทำแบบทดสอบ →</span>
               </div>
-            </Link>
+            </a>
 
             {/* Card 4: Daily Plan & Pomodoro */}
-            <Link
+            <a
               href="/plan"
               className="p-7 rounded-3xl bg-[var(--paper)] border border-[var(--line)] hover:border-black/40 hover:shadow-lg transition-all flex flex-col justify-between group"
             >
@@ -211,10 +210,10 @@ export default function HomeClient({ authPaths, user }: Props) {
               <div className="mt-6 flex items-center text-xs font-black text-[var(--teal)]">
                 <span>ดูแผนอ่าน & จับเวลา →</span>
               </div>
-            </Link>
+            </a>
 
             {/* Card 5: Stats & Analytics */}
-            <Link
+            <a
               href="/stats"
               className="p-7 rounded-3xl bg-[var(--paper)] border border-[var(--line)] hover:border-black/40 hover:shadow-lg transition-all flex flex-col justify-between group"
             >
@@ -230,7 +229,7 @@ export default function HomeClient({ authPaths, user }: Props) {
               <div className="mt-6 flex items-center text-xs font-black text-purple-700">
                 <span>ดูสถิติของคุณ →</span>
               </div>
-            </Link>
+            </a>
           </div>
         </section>
 
@@ -266,18 +265,18 @@ export default function HomeClient({ authPaths, user }: Props) {
                 </div>
 
                 <div className="mt-6 pt-4 border-t border-[var(--line)]/60 flex flex-wrap gap-2">
-                  <Link
+                  <a
                     href={`/vocabulary?level=${lvl.id}`}
                     className="flex-1 py-2 px-3 rounded-xl bg-black/5 hover:bg-black/10 text-[var(--ink)] text-xs font-bold text-center transition-colors"
                   >
                     บัตรคำ
-                  </Link>
-                  <Link
+                  </a>
+                  <a
                     href={`/quiz?level=${lvl.id}`}
                     className="flex-1 py-2 px-3 rounded-xl bg-black/5 hover:bg-black/10 text-[var(--ink)] text-xs font-bold text-center transition-colors"
                   >
                     Quiz
-                  </Link>
+                  </a>
                 </div>
               </div>
             ))}

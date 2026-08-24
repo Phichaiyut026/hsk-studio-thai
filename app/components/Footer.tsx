@@ -1,4 +1,3 @@
-import Link from "next/link";
 
 export default function Footer() {
   return (
@@ -22,29 +21,29 @@ export default function Footer() {
           <h4 className="font-bold text-[var(--ink)] text-sm mb-3">เมนูลัด</h4>
           <ul className="space-y-2 text-xs font-semibold">
             <li>
-              <Link href="/vocabulary" className="hover:text-[var(--ink)] transition-colors">
+              <a href="/vocabulary" className="hover:text-[var(--ink)] transition-colors">
                 บัตรคำ & คลังศัพท์ HSK
-              </Link>
+              </a>
             </li>
             <li>
-              <Link href="/lessons" className="hover:text-[var(--ink)] transition-colors">
+              <a href="/lessons" className="hover:text-[var(--ink)] transition-colors">
                 บทเรียน & ไวยากรณ์
-              </Link>
+              </a>
             </li>
             <li>
-              <Link href="/quiz" className="hover:text-[var(--ink)] transition-colors">
+              <a href="/quiz" className="hover:text-[var(--ink)] transition-colors">
                 ศูนย์รวมแบบทดสอบ Quiz
-              </Link>
+              </a>
             </li>
             <li>
-              <Link href="/plan" className="hover:text-[var(--ink)] transition-colors">
+              <a href="/plan" className="hover:text-[var(--ink)] transition-colors">
                 แผนอ่าน 25 นาที & ตัวจับเวลา
-              </Link>
+              </a>
             </li>
             <li>
-              <Link href="/stats" className="hover:text-[var(--ink)] transition-colors">
+              <a href="/stats" className="hover:text-[var(--ink)] transition-colors">
                 สถิติและความคืบหน้า
-              </Link>
+              </a>
             </li>
           </ul>
         </div>
@@ -52,30 +51,30 @@ export default function Footer() {
         <div>
           <h4 className="font-bold text-[var(--ink)] text-sm mb-3">ระดับการเรียน</h4>
           <div className="flex flex-wrap gap-2 text-xs">
-            <Link
+            <a
               href="/vocabulary?level=hsk1"
               className="px-2.5 py-1 rounded bg-[#dd4b39]/10 text-[#dd4b39] font-bold hover:bg-[#dd4b39]/20"
             >
               HSK 1 (150 คำ)
-            </Link>
-            <Link
+            </a>
+            <a
               href="/vocabulary?level=hsk2"
               className="px-2.5 py-1 rounded bg-[#f29f05]/10 text-[#c77f00] font-bold hover:bg-[#f29f05]/20"
             >
               HSK 2 (300 คำ)
-            </Link>
-            <Link
+            </a>
+            <a
               href="/vocabulary?level=hsk3"
               className="px-2.5 py-1 rounded bg-[#22806b]/10 text-[#22806b] font-bold hover:bg-[#22806b]/20"
             >
               HSK 3 (600 คำ)
-            </Link>
-            <Link
+            </a>
+            <a
               href="/vocabulary?level=hsk4"
               className="px-2.5 py-1 rounded bg-[#2f6db5]/10 text-[#2f6db5] font-bold hover:bg-[#2f6db5]/20"
             >
               HSK 4 (1200 คำ)
-            </Link>
+            </a>
           </div>
         </div>
       </div>
