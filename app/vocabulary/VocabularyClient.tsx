@@ -18,6 +18,7 @@ type Props = {
 };
 
 export default function VocabularyClient({ authPaths, user }: Props) {
+  const [levels, setLevels] = useState(hskLevels);
   const [selectedLevelId, setSelectedLevelId] = useState<string>("hsk1");
   const [mode, setMode] = useState<"flashcard" | "list">("flashcard");
   const [cardIndex, setCardIndex] = useState(0);
@@ -34,17 +35,28 @@ export default function VocabularyClient({ authPaths, user }: Props) {
     }
   });
 
+  useEffect(() => {
+    let ignore = false;
+    fetch("/api/study-data?sessionId=vocabulary")
+      .then((response) => response.ok ? response.json() : null)
+      .then((data: { levels?: typeof hskLevels } | null) => {
+        if (!ignore && data?.levels?.length) setLevels(data.levels);
+      })
+      .catch(() => undefined);
+    return () => { ignore = true; };
+  }, []);
+
   const currentLevel = useMemo(() => {
-    return hskLevels.find((l) => l.id === selectedLevelId) || hskLevels[0];
-  }, [selectedLevelId]);
+    return levels.find((l) => l.id === selectedLevelId) || levels[0];
+  }, [levels, selectedLevelId]);
 
   // All words across levels or within selected level
   const wordsForLevel = useMemo(() => {
     if (selectedLevelId === "all") {
-      return hskLevels.flatMap((l) => l.vocabulary);
+      return levels.flatMap((l) => l.vocabulary);
     }
     return currentLevel.vocabulary;
-  }, [selectedLevelId, currentLevel]);
+  }, [levels, selectedLevelId, currentLevel]);
 
   // Filtered words for list view and flashcard view
   const filteredWords = useMemo(() => {
@@ -129,7 +141,7 @@ export default function VocabularyClient({ authPaths, user }: Props) {
 
           {/* Level Selector Tabs */}
           <div className="flex flex-wrap gap-2.5 mb-6">
-            {hskLevels.map((lvl) => (
+            {levels.map((lvl) => (
               <button
                 key={lvl.id}
                 type="button"

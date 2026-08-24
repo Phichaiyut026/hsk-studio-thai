@@ -221,7 +221,7 @@ export async function registerUser(input: { email: string; displayName: string; 
   await ensureHskSchema();
   const d1 = env.DB;
   const email = input.email.trim().toLowerCase();
-  const existing = await d1.prepare("SELECT user_id, password_hash, role FROM users WHERE lower(email) = ? LIMIT 1").bind(email).first<{ user_id: string; password_hash: string | null; role: AppRole }>();
+  const existing = await d1.prepare("SELECT user_id, password_hash, role FROM users WHERE lower(email) = ? OR lower(display_name) = ? LIMIT 1").bind(email, input.displayName.trim().toLowerCase()).first<{ user_id: string; password_hash: string | null; role: AppRole }>();
   if (existing?.password_hash) throw new Error("อีเมลนี้มีบัญชีอยู่แล้ว");
 
   const countRow = await d1.prepare("SELECT COUNT(*) as total FROM users").first<{ total: number }>();
@@ -241,13 +241,13 @@ export async function registerUser(input: { email: string; displayName: string; 
   return { userId, email, displayName: input.displayName.trim() || email.split("@")[0], role: existing?.role ?? role };
 }
 
-export async function authenticateUser(emailInput: string, password: string) {
+export async function authenticateUser(identifierInput: string, password: string) {
   await ensureHskSchema();
   const d1 = env.DB;
-  const email = emailInput.trim().toLowerCase();
+  const identifier = identifierInput.trim().toLowerCase();
   const row = await d1.prepare(
-    "SELECT user_id, email, display_name, role, password_hash FROM users WHERE lower(email) = ? LIMIT 1",
-  ).bind(email).first<{ user_id: string; email: string; display_name: string; role: AppRole; password_hash: string | null }>();
+    "SELECT user_id, email, display_name, role, password_hash FROM users WHERE lower(display_name) = ? OR lower(email) = ? LIMIT 1",
+  ).bind(identifier, identifier).first<{ user_id: string; email: string; display_name: string; role: AppRole; password_hash: string | null }>();
   if (!row) return null;
 
   if (row.password_hash) {

@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import SpeakButton from "./components/SpeakButton";
-import { hskLevels, dailyTasks } from "../lib/hsk-data";
+import { hskLevels, dailyTasks, type Level } from "../lib/hsk-data";
 
 type Props = {
   authPaths: {
@@ -19,6 +19,7 @@ type Props = {
 };
 
 export default function HomeClient({ authPaths, user }: Props) {
+  const [levels, setLevels] = useState<Level[]>(hskLevels);
   const [checkedTasks] = useState<string[]>(() => {
     if (typeof window === "undefined") return [];
     try {
@@ -29,12 +30,23 @@ export default function HomeClient({ authPaths, user }: Props) {
     }
   });
 
+  useEffect(() => {
+    let ignore = false;
+    fetch("/api/study-data?sessionId=homepage")
+      .then((response) => response.ok ? response.json() : null)
+      .then((data: { levels?: Level[] } | null) => {
+        if (!ignore && data?.levels?.length) setLevels(data.levels);
+      })
+      .catch(() => undefined);
+    return () => { ignore = true; };
+  }, []);
+
   // Daily word randomly picked or fixed based on date
   const wordOfTheDay = useMemo(() => {
-    const allWords = hskLevels.flatMap((l) => l.vocabulary);
+    const allWords = levels.flatMap((l) => l.vocabulary);
     const dayIndex = new Date().getDate() % allWords.length;
     return allWords[dayIndex] || allWords[0];
-  }, []);
+  }, [levels]);
 
   const completion = Math.round((checkedTasks.length / dailyTasks.length) * 100);
 
@@ -261,7 +273,7 @@ export default function HomeClient({ authPaths, user }: Props) {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {hskLevels.map((lvl) => (
+            {levels.map((lvl) => (
               <div
                 key={lvl.id}
                 className="p-6 rounded-3xl bg-[var(--paper)] border border-[var(--line)] flex flex-col justify-between shadow-xs hover:shadow-md transition-all"

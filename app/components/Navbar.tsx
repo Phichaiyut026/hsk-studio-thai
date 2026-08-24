@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type NavbarProps = {
   authPaths?: {
@@ -18,6 +18,26 @@ type NavbarProps = {
 export default function Navbar({ authPaths, user }: NavbarProps) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    let ignore = false;
+    if (!user) {
+      setIsAdmin(false);
+      return () => { ignore = true; };
+    }
+
+    fetch("/api/auth/role")
+      .then((response) => response.ok ? response.json() : { isAdmin: false })
+      .then((data: { isAdmin?: boolean }) => {
+        if (!ignore) setIsAdmin(data.isAdmin === true);
+      })
+      .catch(() => {
+        if (!ignore) setIsAdmin(false);
+      });
+
+    return () => { ignore = true; };
+  }, [user]);
 
   const navItems = [
     { href: "/", label: "หน้าแรก" },
@@ -26,7 +46,7 @@ export default function Navbar({ authPaths, user }: NavbarProps) {
     { href: "/quiz", label: "แบบทดสอบ" },
     { href: "/plan", label: "แผนเรียน & จับเวลา" },
     { href: "/stats", label: "สถิติ & ความคืบหน้า" },
-    { href: "/admin", label: "Dashboard" },
+    ...(isAdmin ? [{ href: "/admin", label: "Dashboard" }] : []),
   ];
 
   return (

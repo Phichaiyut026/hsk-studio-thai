@@ -11,28 +11,27 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const formData = await request.formData();
   const returnTo = safeReturnTo(String(formData.get("return_to") ?? "/"));
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const displayName = String(formData.get("display_name") ?? "").trim();
+  const username = String(formData.get("username") ?? "").trim();
   const password = String(formData.get("password") ?? "");
 
-  if (!isValidEmail(email) || password.length < 6) {
-    return new Response(renderLoginPage(returnTo, "กรุณากรอกอีเมลให้ถูกต้อง และรหัสผ่านอย่างน้อย 6 ตัวอักษร", displayName, email), {
+  if (!username || password.length < 6) {
+    return new Response(renderLoginPage(returnTo, "กรุณากรอกชื่อผู้ใช้ และรหัสผ่านอย่างน้อย 6 ตัวอักษร", username), {
       status: 400,
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
   }
 
-  const account = await authenticateUser(email, password);
+  const account = await authenticateUser(username, password);
   if (!account) {
-    return new Response(renderLoginPage(returnTo, "อีเมลหรือรหัสผ่านไม่ถูกต้อง", displayName, email), {
+    return new Response(renderLoginPage(returnTo, "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง", username), {
       status: 401,
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
   }
 
-  const finalDisplayName = account.displayName || displayName || email.split("@")[0] || "HSK learner";
+  const finalDisplayName = account.displayName || username || "HSK learner";
   const headers = new Headers({ Location: returnTo });
-  setAuthCookies(headers, request.url, email, finalDisplayName);
+  setAuthCookies(headers, request.url, account.email, finalDisplayName);
 
   return new Response(null, { status: 302, headers });
 }
@@ -48,7 +47,7 @@ function setAuthCookies(headers: Headers, requestUrl: string, email: string, dis
   headers.append("Set-Cookie", `${cookies.displayName}=${encodeURIComponent(displayName)}; ${base}`);
 }
 
-function renderLoginPage(returnTo: string, error = "", displayName = "", email = "") {
+function renderLoginPage(returnTo: string, error = "", username = "") {
   return `<!doctype html>
 <html lang="th">
 <head>
@@ -81,15 +80,11 @@ function renderLoginPage(returnTo: string, error = "", displayName = "", email =
     </a>
     <form method="post" action="/login">
       <h1>เข้าสู่ระบบ</h1>
-      <p>เข้าสู่ระบบเพื่อบันทึกความคืบหน้า แบบทดสอบ และสถิติการเรียนของคุณ</p>
+      <p>เข้าสู่ระบบด้วยชื่อผู้ใช้เพื่อบันทึกความคืบหน้า แบบทดสอบ และสถิติการเรียนของคุณ</p>
       <input type="hidden" name="return_to" value="${escapeHtml(returnTo)}" />
       <label>
         ชื่อผู้ใช้
-        <input name="display_name" autocomplete="name" value="${escapeHtml(displayName)}" placeholder="เช่น Sinaumza" />
-      </label>
-      <label>
-        อีเมล
-        <input name="email" type="email" autocomplete="email" required value="${escapeHtml(email)}" placeholder="you@example.com" />
+        <input name="username" autocomplete="username" required value="${escapeHtml(username)}" placeholder="เช่น Sinaumza" />
       </label>
       <label>
         รหัสผ่าน
@@ -108,10 +103,6 @@ function renderLoginPage(returnTo: string, error = "", displayName = "", email =
 function safeReturnTo(value: string | null) {
   if (!value || !value.startsWith("/") || value.startsWith("//")) return "/";
   return value;
-}
-
-function isValidEmail(value: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
 function escapeHtml(value: string) {
