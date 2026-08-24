@@ -509,21 +509,26 @@ type HuggingFaceHskRow = {
 
 export async function syncHuggingFaceHskVocabulary() {
   await ensureHskSchema();
-  const endpoint = "https://datasets-server.huggingface.co/rows?dataset=willfliaw%2Fhsk-dataset&config=default&split=train";
-  const importedRows: HuggingFaceHskRow[] = [];
-  const pageSize = 100;
-
-  for (let offset = 0; offset < 10000; offset += pageSize) {
-    const response = await fetch(`${endpoint}&offset=${offset}&length=${pageSize}`, {
-      headers: { Accept: "application/json" },
-    });
-    if (!response.ok) throw new Error(`Hugging Face API returned ${response.status}`);
-    const payload = (await response.json()) as { rows?: Array<{ row?: HuggingFaceHskRow } | HuggingFaceHskRow> };
-    const rows = (payload.rows ?? []).map((item) => ("row" in item && item.row ? item.row : item as HuggingFaceHskRow));
-    if (!rows.length) break;
-    importedRows.push(...rows);
-    if (rows.length < pageSize) break;
-  }
+  const csvUrl = "https://huggingface.co/datasets/willfliaw/hsk-dataset/resolve/main/data/hsk_words.csv";
+  const response = await fetch(csvUrl, { headers: { Accept: "text/csv" } });
+  if (!response.ok) throw new Error(`Hugging Face CSV returned ${response.status}`);
+  const csv = await response.text();
+  const [headerLine, ...dataLines] = csv.split(/\r?\n/).filter((line) => line.trim());
+  const headers = parseCsvLine(headerLine).map((header) => header.trim());
+  const importedRows = dataLines.map((line) => {
+    const values = parseCsvLine(line);
+    return headers.reduce<HuggingFaceHskRow>((row, header, index) => {
+      const value = values[index]?.trim() ?? "";
+      if (header === "level") row.level = Number(value);
+      if (header === "hanzi") row.hanzi = value;
+      if (header === "pinyin") row.pinyin = value;
+      if (header === "pinyin_tone") row.pinyin_tone = value;
+      if (header === "english") row.english = value;
+      if (header === "pos") row.pos = value || null;
+      if (header === "tts_url") row.tts_url = value || null;
+      return row;
+    }, {});
+  });
 
   const validRows = importedRows.filter((row) => Number(row.level) >= 1 && Number(row.level) <= 6 && row.hanzi?.trim());
   const d1 = env.DB;
@@ -559,6 +564,21 @@ export async function syncHuggingFaceHskVocabulary() {
   }
 
   return { imported: validRows.length, source: "willfliaw/hsk-dataset", license: "CC BY 4.0" };
+}
+
+function parseCsvLine(line: string) {
+  const values: string[] = [];
+  let value = "";
+  let quoted = false;
+  for (let index = 0; index < line.length; index += 1) {
+    const character = line[index];
+    if (character === '"' && line[index + 1] === '"') { value += '"'; index += 1; continue; }
+    if (character === '"') { quoted = !quoted; continue; }
+    if (character === "," && !quoted) { values.push(value); value = ""; continue; }
+    value += character;
+  }
+  values.push(value);
+  return values;
 }
 
 export async function getStudyData(sessionId: string) {
