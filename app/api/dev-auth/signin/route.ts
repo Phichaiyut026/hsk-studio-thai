@@ -17,6 +17,10 @@ export async function GET(request: Request) {
     "Set-Cookie",
     `${cookies.email}=local@example.com; Path=/; SameSite=Lax; HttpOnly`,
   );
+  headers.append(
+    "Set-Cookie",
+    `${cookies.displayName}=Local%20learner; Path=/; SameSite=Lax; HttpOnly`,
+  );
 
   return new Response(null, { status: 302, headers });
 }

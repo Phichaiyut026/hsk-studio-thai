@@ -14,29 +14,32 @@ const USER_FULL_NAME_HEADER = "oai-authenticated-user-full-name";
 const USER_FULL_NAME_ENCODING_HEADER =
   "oai-authenticated-user-full-name-encoding";
 const PERCENT_ENCODED_UTF8 = "percent-encoded-utf-8";
-const SIGN_IN_PATH = "/signin-with-chatgpt";
-const SIGN_OUT_PATH = "/signout-with-chatgpt";
+const SIGN_IN_PATH = "/login";
+const SIGN_OUT_PATH = "/logout";
 const CALLBACK_PATH = "/callback";
 const DEV_USER_ID_COOKIE = "hsk-dev-user-id";
 const DEV_USER_EMAIL_COOKIE = "hsk-dev-user-email";
+const DEV_USER_DISPLAY_NAME_COOKIE = "hsk-dev-display-name";
 
 export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
   const requestHeaders = await headers();
   const userId = requestHeaders.get(USER_ID_HEADER);
   const email = requestHeaders.get(USER_EMAIL_HEADER);
   if (!userId || !email) {
-    if (!isLocalRequest(requestHeaders)) return null;
-
     const cookieStore = await cookies();
     const devUserId = cookieStore.get(DEV_USER_ID_COOKIE)?.value;
     const devEmail = cookieStore.get(DEV_USER_EMAIL_COOKIE)?.value;
+    const devDisplayName = cookieStore.get(DEV_USER_DISPLAY_NAME_COOKIE)?.value;
     if (!devUserId || !devEmail) return null;
+    const displayName =
+      safeDecodeURIComponent(devDisplayName ?? "") ??
+      (isLocalRequest(requestHeaders) ? "Local learner" : "HSK learner");
 
     return {
       userId: devUserId,
-      displayName: "Local learner",
+      displayName,
       email: devEmail,
-      fullName: "Local learner",
+      fullName: displayName,
     };
   }
 
@@ -95,6 +98,7 @@ export function getDevAuthCookieNames() {
   return {
     userId: DEV_USER_ID_COOKIE,
     email: DEV_USER_EMAIL_COOKIE,
+    displayName: DEV_USER_DISPLAY_NAME_COOKIE,
   };
 }
 
