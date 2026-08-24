@@ -632,6 +632,46 @@ export const hskLevels: Level[] = [
       },
     ],
   },
+  {
+    id: "hsk5",
+    title: "HSK 5",
+    words: 2500,
+    target: "อ่านบทความ ข่าว และสื่อสารเรื่องนามธรรมได้คล่องขึ้น",
+    color: "#7b4ab8",
+    focus: "คำศัพท์เชิงวิชาการ สำนวน ข่าว และบทความยาว",
+    vocabulary: [],
+    lesson: {
+      title: "HSK 5 高级阅读",
+      grammar: "โครงสร้างประโยคซับซ้อนและสำนวนระดับสูง",
+      dialog: "数据同步后จะเพิ่มบทเรียนระดับ HSK 5 ในระบบ",
+    },
+    quiz: {
+      id: "quiz-hsk5-placeholder",
+      prompt: "HSK 5 question จะเพิ่มจาก Exam Builder",
+      answer: "待添加",
+      choices: ["待添加", "A", "B", "C"],
+    },
+  },
+  {
+    id: "hsk6",
+    title: "HSK 6",
+    words: 5000,
+    target: "เข้าใจภาษาจีนระดับสูงและเนื้อหาหลากหลายสาขา",
+    color: "#2f6db5",
+    focus: "บทความยาว ภาษาเชิงนามธรรม และการใช้ภาษาอย่างแม่นยำ",
+    vocabulary: [],
+    lesson: {
+      title: "HSK 6 高级理解",
+      grammar: "การวิเคราะห์ข้อความและรูปประโยคระดับสูง",
+      dialog: "数据同步后จะเพิ่มบทเรียนระดับ HSK 6 ในระบบ",
+    },
+    quiz: {
+      id: "quiz-hsk6-placeholder",
+      prompt: "HSK 6 question จะเพิ่มจาก Exam Builder",
+      answer: "待添加",
+      choices: ["待添加", "A", "B", "C"],
+    },
+  },
 ];
 
 export const dailyTasks = [
