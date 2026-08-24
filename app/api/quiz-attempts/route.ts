@@ -12,11 +12,7 @@ function routeError(error: unknown) {
 export async function POST(request: Request) {
   try {
     const user = await getChatGPTUser();
-    if (!user) {
-      return Response.json({ error: "Sign in is required to save quiz attempts" }, { status: 401 });
-    }
-
-    await ensureUserProfile({ userId: user.userId, email: user.email, displayName: user.displayName });
+    if (user) await ensureUserProfile({ userId: user.userId, email: user.email, displayName: user.displayName });
 
     const payload = (await request.json()) as {
       sessionId?: string;
@@ -39,7 +35,7 @@ export async function POST(request: Request) {
 
     await ensureHskSeedData();
     const result = await saveQuizAttempt({
-      userId: user.userId,
+      userId: user?.userId,
       sessionId,
       levelId,
       questionId,

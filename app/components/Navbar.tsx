@@ -42,11 +42,13 @@ export default function Navbar({ authPaths, user }: NavbarProps) {
   const navItems = [
     { href: "/", label: "หน้าแรก" },
     { href: "/vocabulary", label: "บัตรคำ & คลังศัพท์" },
-    { href: "/lessons", label: "บทเรียน & ไวยากรณ์" },
-    { href: "/quiz", label: "แบบทดสอบ" },
-    { href: "/plan", label: "แผนเรียน & จับเวลา" },
     { href: "/stats", label: "สถิติ & ความคืบหน้า" },
-    ...(isAdmin ? [{ href: "/admin", label: "Dashboard" }] : []),
+    ...(isAdmin ? [
+      { href: "/lessons", label: "บทเรียน & ไวยากรณ์" },
+      { href: "/quiz", label: "แบบทดสอบ" },
+      { href: "/plan", label: "แผนเรียน & จับเวลา" },
+      { href: "/admin", label: "Dashboard" },
+    ] : []),
   ];
 
   return (
@@ -54,7 +56,7 @@ export default function Navbar({ authPaths, user }: NavbarProps) {
       <div className="site-navbar-inner">
         <div className="site-navbar-row">
           {/* Brand Logo */}
-          <Link href="/" className="site-navbar-brand">
+          <Link href="/" prefetch={false} className="site-navbar-brand">
             <span className="site-navbar-mark">
               汉
             </span>
@@ -76,6 +78,7 @@ export default function Navbar({ authPaths, user }: NavbarProps) {
                 <Link
                   key={item.href}
                   href={item.href}
+                  prefetch={false}
                   target={item.href === "/admin" ? "_blank" : undefined}
                   rel={item.href === "/admin" ? "noreferrer" : undefined}
                   className={`site-navbar-item ${isActive ? "is-active" : ""}`}
@@ -133,6 +136,7 @@ export default function Navbar({ authPaths, user }: NavbarProps) {
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 target={item.href === "/admin" ? "_blank" : undefined}
                 rel={item.href === "/admin" ? "noreferrer" : undefined}
                 onClick={() => setMobileMenuOpen(false)}

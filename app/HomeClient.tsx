@@ -20,6 +20,7 @@ type Props = {
 
 export default function HomeClient({ authPaths, user }: Props) {
   const [levels, setLevels] = useState<Level[]>(hskLevels);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [checkedTasks] = useState<string[]>(() => {
     if (typeof window === "undefined") return [];
     try {
@@ -40,6 +41,14 @@ export default function HomeClient({ authPaths, user }: Props) {
       .catch(() => undefined);
     return () => { ignore = true; };
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    fetch("/api/auth/role")
+      .then((response) => response.ok ? response.json() : { isAdmin: false })
+      .then((data: { isAdmin?: boolean }) => setIsAdmin(data.isAdmin === true))
+      .catch(() => setIsAdmin(false));
+  }, [user]);
 
   // Daily word randomly picked or fixed based on date
   const wordOfTheDay = useMemo(() => {
@@ -71,15 +80,15 @@ export default function HomeClient({ authPaths, user }: Props) {
                 นาทีต่อวัน
               </p>
               <div className="hero-actions">
-                <Link href="/vocabulary" className="primary-action">
+                <Link href="/vocabulary" prefetch={false} className="primary-action">
                   เริ่มฝึกบัตรคำศัพท์
                 </Link>
-                <Link href="/lessons" className="secondary-action">
+                {isAdmin && <Link href="/lessons" prefetch={false} className="secondary-action">
                   ดูบทเรียนและไวยากรณ์
-                </Link>
-                <Link href="/quiz" className="secondary-action">
+                </Link>}
+                {isAdmin && <Link href="/quiz" prefetch={false} className="secondary-action">
                   ทำแบบทดสอบ
-                </Link>
+                </Link>}
               </div>
             </div>
 
@@ -152,6 +161,7 @@ export default function HomeClient({ authPaths, user }: Props) {
             {/* Card 1: Vocabulary & Flashcards */}
             <Link
               href="/vocabulary"
+              prefetch={false}
               className="p-7 rounded-3xl bg-[var(--paper)] border border-[var(--line)] hover:border-black/40 hover:shadow-lg transition-all flex flex-col justify-between group"
             >
               <div>
@@ -174,7 +184,8 @@ export default function HomeClient({ authPaths, user }: Props) {
             {/* Card 2: Lessons & Grammar */}
             <Link
               href="/lessons"
-              className="p-7 rounded-3xl bg-[var(--paper)] border border-[var(--line)] hover:border-black/40 hover:shadow-lg transition-all flex flex-col justify-between group"
+              prefetch={false}
+              className={`${isAdmin ? "" : "hidden"} p-7 rounded-3xl bg-[var(--paper)] border border-[var(--line)] hover:border-black/40 hover:shadow-lg transition-all flex flex-col justify-between group`}
             >
               <div>
                 <div className="px-3 py-1 rounded-full bg-blue-100/80 text-[var(--blue)] text-xs font-bold uppercase tracking-wider inline-block mb-3">
@@ -196,7 +207,8 @@ export default function HomeClient({ authPaths, user }: Props) {
             {/* Card 3: Quizzes */}
             <Link
               href="/quiz"
-              className="p-7 rounded-3xl bg-[var(--paper)] border border-[var(--line)] hover:border-black/40 hover:shadow-lg transition-all flex flex-col justify-between group"
+              prefetch={false}
+              className={`${isAdmin ? "" : "hidden"} p-7 rounded-3xl bg-[var(--paper)] border border-[var(--line)] hover:border-black/40 hover:shadow-lg transition-all flex flex-col justify-between group`}
             >
               <div>
                 <div className="px-3 py-1 rounded-full bg-amber-100/80 text-amber-800 text-xs font-bold uppercase tracking-wider inline-block mb-3">
@@ -218,7 +230,8 @@ export default function HomeClient({ authPaths, user }: Props) {
             {/* Card 4: Daily Plan & Pomodoro */}
             <Link
               href="/plan"
-              className="p-7 rounded-3xl bg-[var(--paper)] border border-[var(--line)] hover:border-black/40 hover:shadow-lg transition-all flex flex-col justify-between group"
+              prefetch={false}
+              className={`${isAdmin ? "" : "hidden"} p-7 rounded-3xl bg-[var(--paper)] border border-[var(--line)] hover:border-black/40 hover:shadow-lg transition-all flex flex-col justify-between group`}
             >
               <div>
                 <div className="px-3 py-1 rounded-full bg-teal-100/80 text-[var(--teal)] text-xs font-bold uppercase tracking-wider inline-block mb-3">
@@ -240,6 +253,7 @@ export default function HomeClient({ authPaths, user }: Props) {
             {/* Card 5: Stats & Analytics */}
             <Link
               href="/stats"
+              prefetch={false}
               className="p-7 rounded-3xl bg-[var(--paper)] border border-[var(--line)] hover:border-black/40 hover:shadow-lg transition-all flex flex-col justify-between group"
             >
               <div>
@@ -295,16 +309,18 @@ export default function HomeClient({ authPaths, user }: Props) {
                 <div className="mt-6 pt-4 border-t border-[var(--line)]/60 flex flex-wrap gap-2">
                   <Link
                     href={`/vocabulary?level=${lvl.id}`}
+                    prefetch={false}
                     className="flex-1 py-2 px-3 rounded-xl bg-black/5 hover:bg-black/10 text-[var(--ink)] text-xs font-bold text-center transition-colors"
                   >
                     บัตรคำ
                   </Link>
-                  <Link
+                  {isAdmin && <Link
                     href={`/quiz?level=${lvl.id}`}
+                    prefetch={false}
                     className="flex-1 py-2 px-3 rounded-xl bg-black/5 hover:bg-black/10 text-[var(--ink)] text-xs font-bold text-center transition-colors"
                   >
                     แบบทดสอบ
-                  </Link>
+                  </Link>}
                 </div>
               </div>
             ))}

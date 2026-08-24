@@ -47,14 +47,22 @@ export async function ensureHskSeedData() {
     })),
   );
 
-  const questionRows = hskLevels.map((level, index) => ({
-    id: level.quiz.id,
-    levelId: level.id,
-    prompt: level.quiz.prompt,
-    answer: level.quiz.answer,
-    choicesJson: JSON.stringify(level.quiz.choices),
-    position: index,
-  }));
+  const questionRows = hskLevels.flatMap((level) =>
+    (level.quizzes && level.quizzes.length > 0 ? level.quizzes : [level.quiz]).map((question, index) => ({
+      id: question.id,
+      levelId: level.id,
+      prompt: question.prompt,
+      answer: question.answer,
+      choicesJson: JSON.stringify(question.choices),
+      position: index,
+      documentId: question.documentId ?? "H11329",
+      part: question.part ?? "reading",
+      section: question.section ?? "1",
+      format: question.format ?? "choice",
+      questionNumber: question.questionNumber ?? index + 1,
+      mediaUrl: question.mediaUrl ?? null,
+    })),
+  );
 
   await d1.batch([
     ...vocabRows.map((word) =>
@@ -70,8 +78,8 @@ export async function ensureHskSeedData() {
       d1
         .prepare(
           `INSERT OR IGNORE INTO quiz_questions
-          (id, level_id, prompt, answer, choices_json, position)
-          VALUES (?, ?, ?, ?, ?, ?)`,
+          (id, level_id, prompt, answer, choices_json, position, document_id, part, section, format, question_number, media_url)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .bind(
           question.id,
@@ -80,7 +88,23 @@ export async function ensureHskSeedData() {
           question.answer,
           question.choicesJson,
           question.position,
+          question.documentId,
+          question.part,
+          question.section,
+          question.format,
+          question.questionNumber,
+          question.mediaUrl,
         ),
+    ),
+    ...questionRows.map((question) =>
+      d1.prepare(
+        `UPDATE quiz_questions
+         SET document_id = ?, part = ?, section = ?, format = ?, question_number = ?, media_url = ?
+         WHERE id = ?`,
+      ).bind(
+        question.documentId, question.part, question.section, question.format,
+        question.questionNumber, question.mediaUrl, question.id,
+      ),
     ),
   ]);
 }
@@ -127,6 +151,12 @@ async function ensureHskSchema() {
         answer text NOT NULL,
         choices_json text NOT NULL,
         position integer NOT NULL,
+        document_id text NOT NULL DEFAULT 'H11329',
+        part text NOT NULL DEFAULT 'reading',
+        section text NOT NULL DEFAULT '1',
+        format text NOT NULL DEFAULT 'choice',
+        question_number integer NOT NULL DEFAULT 1,
+        media_url text,
         created_at text DEFAULT CURRENT_TIMESTAMP NOT NULL
       )`,
     ),
@@ -157,6 +187,17 @@ async function ensureHskSchema() {
     await d1.prepare("ALTER TABLE quiz_attempts ADD COLUMN user_id text").run();
   } catch {
     // Existing local databases may already have this column.
+  }
+
+  for (const statement of [
+    "ALTER TABLE quiz_questions ADD COLUMN document_id text NOT NULL DEFAULT 'H11329'",
+    "ALTER TABLE quiz_questions ADD COLUMN part text NOT NULL DEFAULT 'reading'",
+    "ALTER TABLE quiz_questions ADD COLUMN section text NOT NULL DEFAULT '1'",
+    "ALTER TABLE quiz_questions ADD COLUMN format text NOT NULL DEFAULT 'choice'",
+    "ALTER TABLE quiz_questions ADD COLUMN question_number integer NOT NULL DEFAULT 1",
+    "ALTER TABLE quiz_questions ADD COLUMN media_url text",
+  ]) {
+    try { await d1.prepare(statement).run(); } catch { /* Existing databases may already have this column. */ }
   }
 
   await d1.batch([
@@ -392,11 +433,68 @@ export async function getSystemOverview(): Promise<SystemOverview> {
   };
 }
 
+export async function listQuizQuestions() {
+  await ensureHskSchema();
+  const result = await env.DB.prepare(
+    `SELECT id, level_id, prompt, answer, choices_json, position, document_id, part, section, format, question_number, media_url, created_at
+     FROM quiz_questions ORDER BY level_id, document_id, part, section, question_number, position`,
+  ).all<{
+    id: string; level_id: string; prompt: string; answer: string; choices_json: string; position: number;
+    document_id: string; part: string; section: string; format: string; question_number: number; media_url: string | null; created_at: string;
+  }>();
+
+  return result.results.map((question) => ({
+    id: question.id,
+    levelId: question.level_id,
+    prompt: question.prompt,
+    answer: question.answer,
+    choices: parseChoices(question.choices_json, []),
+    position: question.position,
+    documentId: question.document_id,
+    part: question.part,
+    section: question.section,
+    format: question.format,
+    questionNumber: question.question_number,
+    mediaUrl: question.media_url ?? "",
+    createdAt: question.created_at,
+  }));
+}
+
+export async function addQuizQuestion(input: {
+  levelId: string;
+  documentId: string;
+  part: string;
+  section: string;
+  format: string;
+  questionNumber: number;
+  prompt: string;
+  choices: string[];
+  answer: string;
+  mediaUrl?: string;
+}) {
+  await ensureHskSchema();
+  const positionRow = await env.DB.prepare(
+    "SELECT COALESCE(MAX(position), -1) + 1 as next_position FROM quiz_questions WHERE level_id = ? AND document_id = ?",
+  ).bind(input.levelId, input.documentId).first<{ next_position: number }>();
+  const id = `admin-quiz-${input.levelId}-${crypto.randomUUID()}`;
+  await env.DB.prepare(
+    `INSERT INTO quiz_questions
+      (id, level_id, prompt, answer, choices_json, position, document_id, part, section, format, question_number, media_url)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).bind(
+    id, input.levelId, input.prompt, input.answer, JSON.stringify(input.choices),
+    Number(positionRow?.next_position ?? 0), input.documentId, input.part, input.section,
+    input.format, input.questionNumber, input.mediaUrl?.trim() || null,
+  ).run();
+  return { id };
+}
+
 export async function getStudyData(sessionId: string) {
   const db = getDb();
   const words = await db.select().from(vocabulary).orderBy(vocabulary.levelId, vocabulary.position);
   const questions = await db.select().from(quizQuestions).orderBy(quizQuestions.levelId, quizQuestions.position);
   const stats = await getQuizStats(sessionId);
+  const progress = await getProgressStats({ sessionId });
 
   const levels: Level[] = hskLevels.map((level) => {
     const levelWords = words
@@ -408,23 +506,37 @@ export async function getStudyData(sessionId: string) {
         thai: word.thai,
         example: word.example,
       }));
-    const question = questions.find((item) => item.levelId === level.id);
+    const levelQuestions = questions
+      .filter((item) => item.levelId === level.id)
+      .sort((left, right) =>
+        `${left.documentId}:${left.part}:${left.section}`.localeCompare(`${right.documentId}:${right.part}:${right.section}`) ||
+        left.questionNumber - right.questionNumber ||
+        left.position - right.position,
+      );
+    const quizzes = levelQuestions.length
+      ? levelQuestions.map((question) => ({
+          id: question.id,
+          prompt: question.prompt,
+          answer: question.answer,
+          choices: parseChoices(question.choicesJson, level.quiz.choices),
+          documentId: question.documentId,
+          part: question.part as "listening" | "reading" | "writing",
+          section: question.section,
+          format: question.format as "choice" | "true-false" | "image-choice" | "matching" | "fill-blank",
+          questionNumber: question.questionNumber,
+          mediaUrl: question.mediaUrl ?? undefined,
+        }))
+      : level.quizzes ?? [level.quiz];
 
     return {
       ...level,
       vocabulary: levelWords.length ? levelWords : level.vocabulary,
-      quiz: question
-        ? {
-            id: question.id,
-            prompt: question.prompt,
-            answer: question.answer,
-            choices: parseChoices(question.choicesJson, level.quiz.choices),
-          }
-        : level.quiz,
+      quiz: quizzes[0] ?? level.quiz,
+      quizzes,
     };
   });
 
-  return { levels, stats };
+  return { levels, stats, progress };
 }
 
 export async function getStudyDataForUser(userId: string) {
@@ -432,11 +544,12 @@ export async function getStudyDataForUser(userId: string) {
   return {
     ...data,
     stats: await getQuizStatsForUser(userId),
+    progress: await getProgressStats({ userId }),
   };
 }
 
 export async function saveQuizAttempt(input: {
-  userId: string;
+  userId?: string;
   sessionId: string;
   levelId: string;
   questionId: string;
@@ -456,7 +569,7 @@ export async function saveQuizAttempt(input: {
   const isCorrect = question.answer === input.selectedAnswer;
   await db.insert(quizAttempts).values({
     id: crypto.randomUUID(),
-    userId: input.userId,
+    userId: input.userId || null,
     sessionId: input.sessionId,
     levelId: input.levelId,
     questionId: input.questionId,
@@ -466,7 +579,103 @@ export async function saveQuizAttempt(input: {
 
   return {
     isCorrect,
-    stats: await getQuizStatsForUser(input.userId),
+    stats: input.userId ? await getQuizStatsForUser(input.userId) : await getQuizStats(input.sessionId),
+    progress: await getProgressStats(input.userId ? { userId: input.userId } : { sessionId: input.sessionId }),
+  };
+}
+
+type ProgressScope = { userId?: string; sessionId?: string };
+
+async function getProgressStats(scope: ProgressScope) {
+  const d1 = env.DB;
+  const whereColumn = scope.userId ? "user_id" : "session_id";
+  const whereValue = scope.userId ?? scope.sessionId ?? "anonymous";
+
+  const levelRows = await d1
+    .prepare(
+      `SELECT
+        level_id,
+        COUNT(*) as total_attempts,
+        COALESCE(SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END), 0) as correct_attempts,
+        MAX(created_at) as last_attempt_at
+       FROM quiz_attempts
+       WHERE ${whereColumn} = ?
+       GROUP BY level_id`,
+    )
+    .bind(whereValue)
+    .all<{
+      level_id: string;
+      total_attempts: number;
+      correct_attempts: number;
+      last_attempt_at: string | null;
+    }>();
+
+  const recentRows = await d1
+    .prepare(
+      `SELECT
+        a.id,
+        a.level_id,
+        a.question_id,
+        a.selected_answer,
+        a.is_correct,
+        a.created_at,
+        q.prompt,
+        q.answer
+       FROM quiz_attempts a
+       LEFT JOIN quiz_questions q ON q.id = a.question_id
+       WHERE a.${whereColumn} = ?
+       ORDER BY a.created_at DESC
+       LIMIT 8`,
+    )
+    .bind(whereValue)
+    .all<{
+      id: string;
+      level_id: string;
+      question_id: string;
+      selected_answer: string;
+      is_correct: number;
+      created_at: string;
+      prompt: string | null;
+      answer: string | null;
+    }>();
+
+  const questionRows = await d1
+    .prepare("SELECT level_id, COUNT(*) as total_questions FROM quiz_questions GROUP BY level_id")
+    .all<{ level_id: string; total_questions: number }>();
+
+  const vocabularyRows = await d1
+    .prepare("SELECT level_id, COUNT(*) as total_words FROM vocabulary GROUP BY level_id")
+    .all<{ level_id: string; total_words: number }>();
+
+  return {
+    levels: hskLevels.map((level) => {
+      const attempts = levelRows.results.find((row) => row.level_id === level.id);
+      const questionCount = questionRows.results.find((row) => row.level_id === level.id)?.total_questions ?? 0;
+      const wordCount = vocabularyRows.results.find((row) => row.level_id === level.id)?.total_words ?? level.vocabulary.length;
+      const totalAttempts = Number(attempts?.total_attempts ?? 0);
+      const correctAttempts = Number(attempts?.correct_attempts ?? 0);
+      return {
+        levelId: level.id,
+        title: level.title,
+        color: level.color,
+        totalWords: Number(wordCount),
+        totalQuestions: Number(questionCount),
+        totalAttempts,
+        correctAttempts,
+        accuracyPercent: totalAttempts > 0 ? Math.round((correctAttempts / totalAttempts) * 100) : 0,
+        lastAttemptAt: attempts?.last_attempt_at ?? null,
+      };
+    }),
+    recentAttempts: recentRows.results.map((row) => ({
+      id: row.id,
+      levelId: row.level_id,
+      questionId: row.question_id,
+      prompt: row.prompt ?? "คำถามนี้ถูกลบหรือยังไม่มีข้อมูล",
+      selectedAnswer: row.selected_answer,
+      correctAnswer: row.answer ?? "",
+      isCorrect: Boolean(row.is_correct),
+      createdAt: row.created_at,
+    })),
   };
 }
 

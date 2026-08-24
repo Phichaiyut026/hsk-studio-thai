@@ -15,6 +15,12 @@ export type QuizItem = {
   answer: string;
   choices: string[];
   explanation?: string;
+  documentId?: string;
+  part?: "listening" | "reading" | "writing";
+  section?: string;
+  format?: "choice" | "true-false" | "image-choice" | "matching" | "fill-blank";
+  questionNumber?: number;
+  mediaUrl?: string;
 };
 
 export type LessonData = {
@@ -180,6 +186,11 @@ export const hskLevels: Level[] = [
         answer: "เพื่อน",
         choices: ["เพื่อน", "หนังสือ", "ร้านอาหาร", "วันพรุ่งนี้"],
         explanation: "朋友 (péngyou) แปลว่า เพื่อน เช่น 她是我的好朋友",
+        documentId: "H11329",
+        part: "listening",
+        section: "1",
+        format: "true-false",
+        questionNumber: 1,
       },
       {
         id: "quiz-hsk1-pinyin-xiexie",
@@ -187,6 +198,11 @@ export const hskLevels: Level[] = [
         answer: "xiè xie",
         choices: ["xiè xie", "zài jiàn", "nǐ hǎo", "duì bu qǐ"],
         explanation: "谢谢 อ่านว่า xiè xie แปลว่า ขอบคุณ",
+        documentId: "H11329",
+        part: "listening",
+        section: "2",
+        format: "image-choice",
+        questionNumber: 6,
       },
       {
         id: "quiz-hsk1-sentence-eat",
@@ -194,6 +210,11 @@ export const hskLevels: Level[] = [
         answer: "คุณกินข้าวหรือยัง?",
         choices: ["คุณกินข้าวหรือยัง?", "คุณชอบกินอะไร?", "คุณไปไหนมา?", "คุณสบายดีไหม?"],
         explanation: "吃饭 (chī fàn) แปลว่า กินข้าว, 吗 (ma) เป็นคำลงท้ายประโยคคำถาม",
+        documentId: "H11329",
+        part: "listening",
+        section: "3",
+        format: "matching",
+        questionNumber: 11,
       },
       {
         id: "quiz-hsk1-number-price",
@@ -201,6 +222,11 @@ export const hskLevels: Level[] = [
         answer: "这个多少钱？",
         choices: ["这个多少钱？", "你在哪里？", "你是谁？", "今天几号？"],
         explanation: "多少钱 (duōshao qián) แปลว่า ราคาเท่าไหร่",
+        documentId: "H11329",
+        part: "reading",
+        section: "1",
+        format: "choice",
+        questionNumber: 21,
       },
     ],
   },

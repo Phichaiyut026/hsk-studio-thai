@@ -4,11 +4,21 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import { hskLevels, type QuizItem } from "../../lib/hsk-data";
+import { hskLevels, type Level, type QuizItem } from "../../lib/hsk-data";
 
 type QuizStats = {
   totalAttempts: number;
   correctAttempts: number;
+};
+
+type ProgressStats = {
+  levels: Array<{
+    levelId: string;
+    totalQuestions: number;
+    totalAttempts: number;
+    correctAttempts: number;
+    accuracyPercent: number;
+  }>;
 };
 
 type Props = {
@@ -34,18 +44,24 @@ function getSessionId() {
 }
 
 export default function QuizClient({ authPaths, user }: Props) {
+  const [levels, setLevels] = useState<Level[]>(hskLevels);
   const [selectedLevelId, setSelectedLevelId] = useState<string>("hsk1");
   const [questionIndex, setQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState("");
   const [isAnswerSubmitted, setIsAnswerSubmitted] = useState(false);
+  const [answers, setAnswers] = useState<Record<number, string>>({});
   const [score, setScore] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
+  const [examStarted, setExamStarted] = useState(false);
+  const [remainingSeconds, setRemainingSeconds] = useState(30 * 60);
+  const [isSubmittingExam, setIsSubmittingExam] = useState(false);
   const [quizStats, setQuizStats] = useState<QuizStats | null>(null);
+  const [progress, setProgress] = useState<ProgressStats | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "offline">("idle");
 
   const activeLevel = useMemo(() => {
-    return hskLevels.find((l) => l.id === selectedLevelId) || hskLevels[0];
-  }, [selectedLevelId]);
+    return levels.find((l) => l.id === selectedLevelId) || levels[0] || hskLevels[0];
+  }, [levels, selectedLevelId]);
 
   const questionsList: QuizItem[] = useMemo(() => {
     return activeLevel.quizzes && activeLevel.quizzes.length > 0
@@ -55,6 +71,36 @@ export default function QuizClient({ authPaths, user }: Props) {
 
   const currentQuestion = questionsList[questionIndex] || questionsList[0];
 
+  const shuffledChoices = useMemo(() => {
+    const choices = currentQuestion?.choices ?? [];
+    const ordered = choices
+      .map((choice, index) => ({
+        choice,
+        order: Array.from(`${currentQuestion.id}:${choice}:${index}`).reduce(
+          (total, character) => (total * 31 + character.charCodeAt(0)) % 997,
+          7,
+        ),
+      }))
+      .sort((left, right) => left.order - right.order)
+      .map((item) => item.choice);
+    if (ordered.length > 1 && ordered[0] === currentQuestion.answer) {
+      ordered.push(ordered.shift() as string);
+    }
+    return ordered;
+  }, [currentQuestion]);
+
+  const answeredCount = Object.keys(answers).length;
+  const timeLabel = `${String(Math.floor(remainingSeconds / 60)).padStart(2, "0")}:${String(
+    remainingSeconds % 60,
+  ).padStart(2, "0")}`;
+
+  useEffect(() => {
+    const levelFromUrl = new URLSearchParams(window.location.search).get("level");
+    if (levelFromUrl) {
+      setSelectedLevelId(levelFromUrl);
+    }
+  }, []);
+
   useEffect(() => {
     let ignore = false;
     async function loadStats() {
@@ -62,9 +108,18 @@ export default function QuizClient({ authPaths, user }: Props) {
         const sessionId = getSessionId();
         const res = await fetch(`/api/study-data?sessionId=${encodeURIComponent(sessionId)}`);
         if (!res.ok) return;
-        const data = (await res.json()) as { stats?: QuizStats };
+        const data = (await res.json()) as { levels?: Level[]; stats?: QuizStats; progress?: ProgressStats };
+        if (!ignore && data.levels && data.levels.length > 0) {
+          setLevels(data.levels);
+          if (!data.levels.some((level) => level.id === selectedLevelId)) {
+            setSelectedLevelId(data.levels[0].id);
+          }
+        }
         if (!ignore && data.stats) {
           setQuizStats(data.stats);
+        }
+        if (!ignore && data.progress) {
+          setProgress(data.progress);
         }
       } catch {
         // ignore
@@ -74,51 +129,41 @@ export default function QuizClient({ authPaths, user }: Props) {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [selectedLevelId]);
+
+  useEffect(() => {
+    if (!examStarted || isFinished) return;
+    if (remainingSeconds <= 0) {
+      void handleFinishExam();
+      return;
+    }
+    const timer = window.setInterval(() => setRemainingSeconds((seconds) => seconds - 1), 1000);
+    return () => window.clearInterval(timer);
+  }, [examStarted, isFinished, remainingSeconds]);
 
   function handleSelectLevel(levelId: string) {
     setSelectedLevelId(levelId);
     setQuestionIndex(0);
     setSelectedAnswer("");
     setIsAnswerSubmitted(false);
+    setAnswers({});
     setScore(0);
     setIsFinished(false);
+    setExamStarted(false);
+    setRemainingSeconds(30 * 60);
     setSaveStatus("idle");
   }
 
-  async function handleChooseAnswer(choice: string) {
+  function handleStartExam() {
+    setExamStarted(true);
+    setRemainingSeconds(30 * 60);
+  }
+
+  function handleChooseAnswer(choice: string) {
     if (isAnswerSubmitted) return;
     setSelectedAnswer(choice);
     setIsAnswerSubmitted(true);
-
-    const isCorrect = choice === currentQuestion.answer;
-    if (isCorrect) {
-      setScore((s) => s + 1);
-    }
-
-    // Save attempt to backend
-    setSaveStatus("saving");
-    try {
-      const response = await fetch("/api/quiz-attempts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId: getSessionId(),
-          levelId: activeLevel.id,
-          questionId: currentQuestion.id,
-          selectedAnswer: choice,
-        }),
-      });
-
-      if (!response.ok) throw new Error("Could not save quiz attempt");
-      const data = (await response.json()) as { stats?: QuizStats };
-      if (data.stats) {
-        setQuizStats(data.stats);
-      }
-      setSaveStatus("saved");
-    } catch {
-      setSaveStatus("offline");
-    }
+    setAnswers((previous) => ({ ...previous, [questionIndex]: choice }));
   }
 
   function handleNextQuestion() {
@@ -126,7 +171,56 @@ export default function QuizClient({ authPaths, user }: Props) {
       setQuestionIndex((prev) => prev + 1);
       setSelectedAnswer("");
       setIsAnswerSubmitted(false);
+      setSelectedAnswer(answers[questionIndex + 1] || "");
     } else {
+      void handleFinishExam();
+    }
+  }
+
+  async function handleFinishExam() {
+    if (isSubmittingExam || isFinished) return;
+    const finalAnswers = selectedAnswer
+      ? { ...answers, [questionIndex]: selectedAnswer }
+      : answers;
+    const finalScore = questionsList.reduce(
+      (total, question, index) => total + (finalAnswers[index] === question.answer ? 1 : 0),
+      0,
+    );
+    setAnswers(finalAnswers);
+    setScore(finalScore);
+    setIsSubmittingExam(true);
+    setSaveStatus("saving");
+
+    try {
+      const responses = await Promise.all(
+        Object.entries(finalAnswers).map(([index, choice]) =>
+          fetch("/api/quiz-attempts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sessionId: getSessionId(),
+              levelId: activeLevel.id,
+              questionId: questionsList[Number(index)]?.id,
+              selectedAnswer: choice,
+            }),
+          }),
+        ),
+      );
+      const lastSuccessful = responses.find((response) => response.ok);
+      if (lastSuccessful) {
+        const data = (await lastSuccessful.json()) as { stats?: QuizStats; progress?: ProgressStats };
+        if (data.stats) setQuizStats(data.stats);
+        if (data.progress) setProgress(data.progress);
+        setSaveStatus("saved");
+      } else if (responses.length > 0) {
+        throw new Error("Could not save exam attempts");
+      } else {
+        setSaveStatus("saved");
+      }
+    } catch {
+      setSaveStatus("offline");
+    } finally {
+      setIsSubmittingExam(false);
       setIsFinished(true);
     }
   }
@@ -135,8 +229,12 @@ export default function QuizClient({ authPaths, user }: Props) {
     setQuestionIndex(0);
     setSelectedAnswer("");
     setIsAnswerSubmitted(false);
+    setAnswers({});
     setScore(0);
     setIsFinished(false);
+    setExamStarted(true);
+    setRemainingSeconds(30 * 60);
+    setSaveStatus("idle");
   }
 
   return (
@@ -144,7 +242,7 @@ export default function QuizClient({ authPaths, user }: Props) {
       <div>
         <Navbar authPaths={authPaths} user={user} />
 
-        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header */}
           <div className="mb-8 text-center sm:text-left">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-bold uppercase tracking-wider mb-2">
@@ -178,7 +276,9 @@ export default function QuizClient({ authPaths, user }: Props) {
 
           {/* Level Tabs */}
           <div className="flex flex-wrap gap-2 mb-8">
-            {hskLevels.map((lvl) => (
+            {levels.map((lvl) => {
+              const levelProgress = progress?.levels.find((item) => item.levelId === lvl.id);
+              return (
               <button
                 key={lvl.id}
                 type="button"
@@ -189,21 +289,56 @@ export default function QuizClient({ authPaths, user }: Props) {
                     : "bg-[var(--paper)] text-[var(--ink)] border-[var(--line)] hover:border-black/30"
                 }`}
               >
-                {lvl.title} Quiz
+                <span>{lvl.title} Mock Exam</span>
+                {levelProgress && levelProgress.totalAttempts > 0 && (
+                  <span className="ml-2 opacity-70">
+                    {levelProgress.accuracyPercent}%
+                  </span>
+                )}
               </button>
-            ))}
+            )})}
           </div>
 
-          {!isFinished ? (
+          {!examStarted && !isFinished ? (
+            <div className="p-6 sm:p-10 rounded-3xl bg-[var(--paper)] border border-[var(--line)] shadow-lg">
+              <div className="max-w-2xl mx-auto text-center space-y-6">
+                <div className="mx-auto w-16 h-16 rounded-full bg-[var(--ink)] text-white grid place-items-center text-2xl font-black">试</div>
+                <div>
+                  <span className="text-xs font-black tracking-widest text-[var(--red)] uppercase">Mock Examination</span>
+                  <h2 className="text-3xl sm:text-4xl font-black mt-2">{activeLevel.title} 模拟考试</h2>
+                  <p className="text-[var(--muted)] mt-3">จำลองบรรยากาศการสอบจริง ทำข้อสอบให้ครบก่อนส่ง และจะเห็นเฉลยพร้อมคะแนนหลังจบเท่านั้น</p>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-left">
+                  {[
+                    ["จำนวนข้อ", `${questionsList.length} ข้อ`],
+                    ["เวลา", "30 นาที"],
+                    ["รูปแบบ", "เลือกตอบ"],
+                    ["สถานะ", "พร้อมสอบ"],
+                  ].map(([label, value]) => <div key={label} className="p-3 rounded-xl border border-[var(--line)] bg-white"><span className="block text-[11px] text-[var(--muted)] font-bold">{label}</span><strong className="block mt-1 text-sm">{value}</strong></div>)}
+                </div>
+                <div className="text-left p-4 rounded-xl bg-[#f5f1e8] border border-[#e4dccd] text-sm leading-relaxed">
+                  <strong>คำแนะนำก่อนเริ่มสอบ</strong>
+                  <ul className="mt-2 list-disc pl-5 text-[var(--muted)]"><li>เลือกคำตอบได้ครั้งเดียวต่อข้อ และไปข้อถัดไปได้เมื่อเลือกแล้ว</li><li>ใช้แถบเลขข้อเพื่อตรวจดูข้อที่ทำแล้ว</li><li>เมื่อหมดเวลาระบบจะส่งข้อสอบให้อัตโนมัติ</li></ul>
+                </div>
+                <button type="button" onClick={handleStartExam} className="px-8 py-3 rounded-xl bg-[var(--ink)] text-white font-black shadow-md hover:bg-black">เริ่มทำข้อสอบ</button>
+              </div>
+            </div>
+          ) : !isFinished ? (
             /* Quiz In Progress */
-            <div className="p-6 sm:p-10 rounded-3xl bg-[var(--paper)] border border-[var(--line)] shadow-lg space-y-6">
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-xl bg-[var(--ink)] text-white shadow-md">
+                <div><span className="text-[10px] uppercase tracking-widest opacity-60">{currentQuestion.documentId ?? "H11329"} · Mock Examination</span><strong className="block text-lg">{activeLevel.title} · {currentQuestion.part === "listening" ? "听力 ฟัง" : currentQuestion.part === "writing" ? "书写 เขียน" : "阅读 อ่าน"} · ส่วนที่ {currentQuestion.section ?? "1"}</strong></div>
+                <div className={`font-mono text-xl font-black ${remainingSeconds < 300 ? "text-red-300" : "text-amber-200"}`}>เวลาเหลือ {timeLabel}</div>
+              </div>
+              <div className="grid lg:grid-cols-[minmax(0,1fr)_210px] gap-4 items-start">
+              <div className="p-6 sm:p-10 rounded-3xl bg-[var(--paper)] border border-[var(--line)] shadow-lg space-y-6">
               {/* Progress bar */}
               <div>
                 <div className="flex items-center justify-between text-xs font-bold text-[var(--muted)] mb-2">
                   <span>
                     ข้อที่ {questionIndex + 1} จาก {questionsList.length}
                   </span>
-                  <span>คะแนนปัจจุบัน: {score}</span>
+                  <span>ทำแล้ว {answeredCount} / {questionsList.length} ข้อ</span>
                 </div>
                 <div className="w-full h-2 rounded-full bg-gray-200 overflow-hidden">
                   <div
@@ -218,8 +353,9 @@ export default function QuizClient({ authPaths, user }: Props) {
               {/* Question Prompt */}
               <div className="py-4">
                 <span className="text-xs font-bold text-[var(--red)] uppercase tracking-wider block mb-1">
-                  คำถาม ({activeLevel.title})
+                  ข้อ {currentQuestion.questionNumber ?? questionIndex + 1} · {currentQuestion.format ?? "choice"} ({activeLevel.title})
                 </span>
+                {currentQuestion.mediaUrl && <img src={currentQuestion.mediaUrl} alt="ภาพประกอบข้อสอบ" className="max-h-48 max-w-full object-contain rounded-lg border border-[var(--line)] mb-4" />}
                 <h2 className="text-xl sm:text-2xl font-black text-[var(--ink)] leading-snug">
                   {currentQuestion.prompt}
                 </h2>
@@ -227,23 +363,11 @@ export default function QuizClient({ authPaths, user }: Props) {
 
               {/* Choices */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                {currentQuestion.choices.map((choice, i) => {
+                {shuffledChoices.map((choice, i) => {
                   const isSelected = selectedAnswer === choice;
-                  const isCorrect = choice === currentQuestion.answer;
-                  let btnStyle =
-                    "bg-white border-[var(--line)] text-[var(--ink)] hover:border-black/40";
-
-                  if (isAnswerSubmitted) {
-                    if (isCorrect) {
-                      btnStyle = "bg-green-100 border-green-500 text-green-900 font-black";
-                    } else if (isSelected && !isCorrect) {
-                      btnStyle = "bg-red-100 border-red-500 text-red-900 font-bold";
-                    } else {
-                      btnStyle = "bg-gray-50 border-gray-200 text-gray-400 opacity-60";
-                    }
-                  } else if (isSelected) {
-                    btnStyle = "border-[var(--ink)] bg-gray-100";
-                  }
+                  const btnStyle = isSelected
+                    ? "border-[var(--ink)] bg-[#e9f1ef] text-[var(--ink)] ring-2 ring-[var(--teal)]/30"
+                    : "bg-white border-[var(--line)] text-[var(--ink)] hover:border-black/40";
 
                   return (
                     <button
@@ -254,46 +378,15 @@ export default function QuizClient({ authPaths, user }: Props) {
                       className={`p-4 rounded-2xl border text-left text-base font-bold transition-all shadow-xs flex items-center justify-between ${btnStyle}`}
                     >
                       <span>{choice}</span>
-                      {isAnswerSubmitted && isCorrect && <span className="text-xs font-bold text-green-800">ถูกต้อง</span>}
-                      {isAnswerSubmitted && isSelected && !isCorrect && <span className="text-xs font-bold text-red-800">ยังไม่ถูก</span>}
+                      {isSelected && <span className="text-xs font-bold text-[var(--teal)]">คำตอบของคุณ</span>}
                     </button>
                   );
                 })}
               </div>
 
               {/* Feedback and Explanation */}
-              {isAnswerSubmitted && (
-                <div
-                  className={`p-5 rounded-2xl border text-sm space-y-2 animate-fadeIn ${
-                    selectedAnswer === currentQuestion.answer
-                      ? "bg-green-50/80 border-green-200 text-green-950"
-                      : "bg-red-50/80 border-red-200 text-red-950"
-                  }`}
-                >
-                  <div className="flex items-center gap-2 font-black text-base">
-                    <span>
-                      {selectedAnswer === currentQuestion.answer
-                        ? "ถูกต้องแล้ว"
-                        : "ยังไม่ถูกต้อง"}
-                    </span>
-                  </div>
-                  {currentQuestion.explanation && (
-                    <p className="text-xs leading-relaxed opacity-90">
-                      <strong>คำอธิบาย:</strong> {currentQuestion.explanation}
-                    </p>
-                  )}
-                  {saveStatus === "saving" && (
-                    <span className="text-[11px] opacity-70 block">
-                      กำลังบันทึกคะแนน...
-                    </span>
-                  )}
-                  {saveStatus === "saved" && (
-                    <span className="text-[11px] opacity-70 block">
-                      บันทึกสถิติลงระบบเรียบร้อย
-                    </span>
-                  )}
-                </div>
-              )}
+              {isAnswerSubmitted && <div className="p-4 rounded-xl border border-blue-200 bg-blue-50 text-blue-950 text-sm">บันทึกคำตอบแล้ว สามารถไปข้อถัดไปได้</div>}
+              <div className="text-center text-[10px] tracking-widest text-[var(--muted)] pt-1">{currentQuestion.documentId ?? "H11329"} - {currentQuestion.questionNumber ?? questionIndex + 1}</div>
 
               {/* Next Action Button */}
               {isAnswerSubmitted && (
@@ -311,6 +404,14 @@ export default function QuizClient({ authPaths, user }: Props) {
                   </button>
                 </div>
               )}
+              </div>
+              <aside className="p-4 rounded-2xl bg-[var(--paper)] border border-[var(--line)] shadow-sm lg:sticky lg:top-4">
+                <div className="flex items-center justify-between mb-3"><strong className="text-sm">กระดาษคำตอบ</strong><span className="text-xs text-[var(--muted)]">{answeredCount}/{questionsList.length}</span></div>
+                <div className="grid grid-cols-5 gap-2">{questionsList.map((_, index) => <button key={index} type="button" onClick={() => { setQuestionIndex(index); setSelectedAnswer(answers[index] || ""); setIsAnswerSubmitted(Boolean(answers[index])); }} className={`aspect-square rounded-lg text-xs font-black border ${index === questionIndex ? "bg-[var(--ink)] text-white border-[var(--ink)]" : answers[index] ? "bg-teal-50 text-teal-900 border-teal-300" : "bg-white text-[var(--muted)] border-[var(--line)]"}`}>{index + 1}</button>)}</div>
+                <div className="mt-4 space-y-2 text-xs text-[var(--muted)]"><p><span className="inline-block w-2.5 h-2.5 rounded-sm bg-teal-100 border border-teal-300 mr-2" />ตอบแล้ว</p><p><span className="inline-block w-2.5 h-2.5 rounded-sm bg-white border border-[var(--line)] mr-2" />ยังไม่ได้ตอบ</p></div>
+                <button type="button" onClick={() => void handleFinishExam()} disabled={isSubmittingExam} className="w-full mt-4 px-3 py-3 rounded-xl bg-[var(--red)] text-white text-sm font-black disabled:opacity-50">ส่งคำตอบทั้งหมด</button>
+              </aside>
+              </div>
             </div>
           ) : (
             /* Quiz Completed Result Screen */
@@ -327,8 +428,22 @@ export default function QuizClient({ authPaths, user }: Props) {
                     ? "ยอดเยี่ยมมาก คุณทำถูกต้องครบทุกข้อ พร้อมลุยระดับถัดไปแล้ว"
                     : score >= questionsList.length / 2
                     ? "ทำได้ดีมาก ลองทบทวนจุดที่ผิดและฝึกซ้ำอีกรอบเพื่อความแม่นยำ"
-                    : "กลับไปทบทวนบัตรคำและบทเรียน แล้วลองทำใหม่อีกครั้งนะ"}
+                  : "กลับไปทบทวนบัตรคำและบทเรียน แล้วลองทำใหม่อีกครั้งนะ"}
                 </p>
+                <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#f5f1e8] text-xs font-bold text-[var(--muted)]">
+                  {saveStatus === "saved" ? "บันทึกผลสอบลงระบบแล้ว" : "ไม่สามารถบันทึกผลสอบได้ ระบบแสดงผลจากเครื่องนี้"}
+                </div>
+              </div>
+
+              <div className="text-left max-w-2xl mx-auto border-t border-[var(--line)] pt-5">
+                <h3 className="font-black text-sm mb-3">ตรวจคำตอบหลังสอบ</h3>
+                <div className="space-y-2 max-h-72 overflow-auto pr-1">
+                  {questionsList.map((question, index) => {
+                    const answer = answers[index];
+                    const correct = answer === question.answer;
+                    return <div key={question.id} className={`flex gap-3 items-start p-3 rounded-lg text-sm ${correct ? "bg-green-50" : "bg-red-50"}`}><span className="font-black w-6">{index + 1}</span><div className="min-w-0"><p className="font-bold">{question.prompt}</p><p className="text-xs mt-1 text-[var(--muted)]">คำตอบของคุณ: {answer || "ไม่ได้ตอบ"} · เฉลย: {question.answer}</p></div></div>;
+                  })}
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
@@ -341,6 +456,7 @@ export default function QuizClient({ authPaths, user }: Props) {
                 </button>
                 <Link
                   href="/vocabulary"
+                  prefetch={false}
                   className="px-6 py-3 rounded-xl bg-white border border-[var(--line)] hover:bg-gray-50 text-[var(--ink)] font-bold text-sm shadow-xs transition-transform active:scale-95"
                 >
                   ไปทบทวนบัตรคำศัพท์

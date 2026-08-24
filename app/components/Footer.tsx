@@ -1,6 +1,18 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 export default function Footer() {
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/auth/role")
+      .then((response) => response.ok ? response.json() : { isAdmin: false })
+      .then((data: { isAdmin?: boolean }) => setIsAdmin(data.isAdmin === true))
+      .catch(() => setIsAdmin(false));
+  }, []);
+
   return (
     <footer className="w-full bg-[var(--paper)] border-t border-[var(--line)] py-12 mt-20 text-[var(--muted)] text-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-8">
@@ -22,27 +34,17 @@ export default function Footer() {
           <h4 className="font-bold text-[var(--ink)] text-sm mb-3">เมนูลัด</h4>
           <ul className="space-y-2 text-xs font-semibold">
             <li>
-              <Link href="/vocabulary" className="hover:text-[var(--ink)] transition-colors">
+              <Link href="/vocabulary" prefetch={false} className="hover:text-[var(--ink)] transition-colors">
                 บัตรคำ & คลังศัพท์ HSK
               </Link>
             </li>
+            {isAdmin && <>
+              <li><Link href="/lessons" prefetch={false} className="hover:text-[var(--ink)] transition-colors">บทเรียน & ไวยากรณ์</Link></li>
+              <li><Link href="/quiz" prefetch={false} className="hover:text-[var(--ink)] transition-colors">ศูนย์รวมแบบทดสอบ Quiz</Link></li>
+              <li><Link href="/plan" prefetch={false} className="hover:text-[var(--ink)] transition-colors">แผนอ่าน 25 นาที & ตัวจับเวลา</Link></li>
+            </>}
             <li>
-              <Link href="/lessons" className="hover:text-[var(--ink)] transition-colors">
-                บทเรียน & ไวยากรณ์
-              </Link>
-            </li>
-            <li>
-              <Link href="/quiz" className="hover:text-[var(--ink)] transition-colors">
-                ศูนย์รวมแบบทดสอบ Quiz
-              </Link>
-            </li>
-            <li>
-              <Link href="/plan" className="hover:text-[var(--ink)] transition-colors">
-                แผนอ่าน 25 นาที & ตัวจับเวลา
-              </Link>
-            </li>
-            <li>
-              <Link href="/stats" className="hover:text-[var(--ink)] transition-colors">
+              <Link href="/stats" prefetch={false} className="hover:text-[var(--ink)] transition-colors">
                 สถิติและความคืบหน้า
               </Link>
             </li>
@@ -54,24 +56,28 @@ export default function Footer() {
           <div className="flex flex-wrap gap-2 text-xs">
             <Link
               href="/vocabulary?level=hsk1"
+              prefetch={false}
               className="px-2.5 py-1 rounded bg-[#dd4b39]/10 text-[#dd4b39] font-bold hover:bg-[#dd4b39]/20"
             >
               HSK 1 (150 คำ)
             </Link>
             <Link
               href="/vocabulary?level=hsk2"
+              prefetch={false}
               className="px-2.5 py-1 rounded bg-[#f29f05]/10 text-[#c77f00] font-bold hover:bg-[#f29f05]/20"
             >
               HSK 2 (300 คำ)
             </Link>
             <Link
               href="/vocabulary?level=hsk3"
+              prefetch={false}
               className="px-2.5 py-1 rounded bg-[#22806b]/10 text-[#22806b] font-bold hover:bg-[#22806b]/20"
             >
               HSK 3 (600 คำ)
             </Link>
             <Link
               href="/vocabulary?level=hsk4"
+              prefetch={false}
               className="px-2.5 py-1 rounded bg-[#2f6db5]/10 text-[#2f6db5] font-bold hover:bg-[#2f6db5]/20"
             >
               HSK 4 (1200 คำ)

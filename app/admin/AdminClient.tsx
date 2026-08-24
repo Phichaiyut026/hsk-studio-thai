@@ -21,6 +21,20 @@ type AdminVocabulary = {
   createdAt: string;
 };
 
+type AdminQuestion = {
+  id: string;
+  levelId: string;
+  documentId: string;
+  part: string;
+  section: string;
+  format: string;
+  questionNumber: number;
+  prompt: string;
+  choices: string[];
+  answer: string;
+  mediaUrl: string;
+};
+
 type SystemOverview = {
   users: { total: number; admins: number; regular: number };
   content: { vocabulary: number; quizQuestions: number; quizAttempts: number };
@@ -40,6 +54,7 @@ export default function AdminClient({
   const [overview, setOverview] = useState<SystemOverview | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [vocabulary, setVocabulary] = useState<AdminVocabulary[]>([]);
+  const [questions, setQuestions] = useState<AdminQuestion[]>([]);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [query, setQuery] = useState("");
@@ -67,8 +82,15 @@ export default function AdminClient({
     setVocabulary(data.vocabulary);
   }
 
+  async function loadQuestions() {
+    const response = await fetch("/api/admin/exams");
+    if (!response.ok) return;
+    const data = (await response.json()) as { questions: AdminQuestion[] };
+    setQuestions(data.questions);
+  }
+
   useEffect(() => {
-    void Promise.all([loadOverview(), loadUsers(), loadVocabulary()]);
+    void Promise.all([loadOverview(), loadUsers(), loadVocabulary(), loadQuestions()]);
   }, []);
 
   async function changeRole(userId: string, role: "user" | "admin") {
@@ -145,7 +167,7 @@ export default function AdminClient({
           <div><span className="admin-breadcrumb">Admin Console / {tabLabel(activeTab)}</span><h1>{tabTitle(activeTab)}</h1></div>
           <div className="admin-topbar-actions"><span className="admin-live-status"><i /> ระบบทำงานปกติ</span><a href="/" target="_blank" rel="noreferrer" className="admin-open-site">ดูเว็บไซต์</a></div>
         </header>
-        {activeTab === "overview" ? <OverviewPanel overview={overview} busy={busy} seedHskData={seedHskData} setActiveTab={setActiveTab} /> : activeTab === "users" ? <UsersPanel users={filteredUsers} query={query} setQuery={setQuery} currentUserEmail={user.email} changeRole={changeRole} onCreated={() => Promise.all([loadUsers(), loadOverview()])} setMessage={setMessage} /> : activeTab === "vocabulary" ? <VocabularyPanel setMessage={setMessage} onSaved={loadVocabulary} /> : activeTab === "vocabulary-list" ? <VocabularyListPanel vocabulary={filteredVocabulary} query={vocabularyQuery} setQuery={setVocabularyQuery} level={vocabularyLevel} setLevel={setVocabularyLevel} setMessage={setMessage} onChanged={loadVocabulary} /> : <ExamsPanel />}
+        {activeTab === "overview" ? <OverviewPanel overview={overview} busy={busy} seedHskData={seedHskData} setActiveTab={setActiveTab} /> : activeTab === "users" ? <UsersPanel users={filteredUsers} query={query} setQuery={setQuery} currentUserEmail={user.email} changeRole={changeRole} onCreated={() => Promise.all([loadUsers(), loadOverview()])} setMessage={setMessage} /> : activeTab === "vocabulary" ? <VocabularyPanel setMessage={setMessage} onSaved={loadVocabulary} /> : activeTab === "vocabulary-list" ? <VocabularyListPanel vocabulary={filteredVocabulary} query={vocabularyQuery} setQuery={setVocabularyQuery} level={vocabularyLevel} setLevel={setVocabularyLevel} setMessage={setMessage} onChanged={loadVocabulary} /> : <ExamsPanel questions={questions} setMessage={setMessage} onSaved={loadQuestions} />}
         {message && <p className="admin-toast" role="status">{message}</p>}
       </main>
     </div>
@@ -242,21 +264,36 @@ function VocabularyListPanel({ vocabulary, query, setQuery, level, setLevel, set
   );
 }
 
-function ExamsPanel() {
+function ExamsPanel({ questions, setMessage, onSaved }: { questions: AdminQuestion[]; setMessage: (message: string) => void; onSaved: () => Promise<void> }) {
+  const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ levelId: "hsk1", documentId: "H11329", part: "reading", section: "1", format: "choice", questionNumber: "1", prompt: "", choices: ["", "", "", ""], answer: "", mediaUrl: "" });
+  const update = (field: string, value: string) => setForm((current) => ({ ...current, [field]: value }));
+  const updateChoice = (index: number, value: string) => setForm((current) => ({ ...current, choices: current.choices.map((choice, choiceIndex) => choiceIndex === index ? value : choice) }));
+  async function createQuestion(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    const response = await fetch("/api/admin/exams", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, questionNumber: Number(form.questionNumber), choices: form.choices }) });
+    const data = (await response.json().catch(() => ({}))) as { error?: string };
+    if (response.ok) { setMessage("เพิ่มข้อสอบเรียบร้อย"); setShowForm(false); setForm({ ...form, prompt: "", choices: ["", "", "", ""], answer: "", mediaUrl: "" }); await onSaved(); } else setMessage(data.error ?? "เพิ่มข้อสอบไม่สำเร็จ");
+    setSaving(false);
+  }
   const examLevels = [
-    { level: "HSK 1", description: "พื้นฐานการสื่อสารในชีวิตประจำวัน", parts: [{ name: "ฟัง", count: 0, minutes: 15 }, { name: "อ่าน", count: 0, minutes: 17 }] },
-    { level: "HSK 2", description: "ประโยคและบทสนทนาที่ใช้บ่อย", parts: [{ name: "ฟัง", count: 0, minutes: 25 }, { name: "อ่าน", count: 0, minutes: 22 }] },
-    { level: "HSK 3", description: "สื่อสารเรื่องทั่วไปและข้อความสั้น", parts: [{ name: "ฟัง", count: 0, minutes: 35 }, { name: "อ่าน", count: 0, minutes: 30 }, { name: "เขียน", count: 0, minutes: 15 }] },
-    { level: "HSK 4", description: "เข้าใจเนื้อหาที่ซับซ้อนขึ้น", parts: [{ name: "ฟัง", count: 0, minutes: 30 }, { name: "อ่าน", count: 0, minutes: 40 }, { name: "เขียน", count: 0, minutes: 15 }] },
-    { level: "HSK 5", description: "อ่านข่าวและสื่อสารเชิงลึก", parts: [{ name: "ฟัง", count: 0, minutes: 30 }, { name: "อ่าน", count: 0, minutes: 45 }, { name: "เขียน", count: 0, minutes: 40 }] },
-    { level: "HSK 6", description: "ใช้งานภาษาจีนระดับสูง", parts: [{ name: "ฟัง", count: 0, minutes: 35 }, { name: "อ่าน", count: 0, minutes: 50 }, { name: "เขียน", count: 0, minutes: 45 }] },
+    { level: "HSK 1", levelId: "hsk1", live: true, description: "พื้นฐานการสื่อสารในชีวิตประจำวัน", parts: [{ name: "คำศัพท์", count: 2, minutes: 8 }, { name: "อ่าน", count: 2, minutes: 8 }] },
+    { level: "HSK 2", levelId: "hsk2", live: true, description: "ประโยคและบทสนทนาที่ใช้บ่อย", parts: [{ name: "ไวยากรณ์", count: 2, minutes: 10 }, { name: "อ่าน", count: 2, minutes: 10 }] },
+    { level: "HSK 3", levelId: "hsk3", live: true, description: "สื่อสารเรื่องทั่วไปและข้อความสั้น", parts: [{ name: "ไวยากรณ์", count: 2, minutes: 12 }, { name: "อ่าน", count: 2, minutes: 12 }] },
+    { level: "HSK 4", levelId: "hsk4", live: true, description: "เข้าใจเนื้อหาที่ซับซ้อนขึ้น", parts: [{ name: "ไวยากรณ์", count: 2, minutes: 12 }, { name: "อ่าน", count: 2, minutes: 12 }] },
+    { level: "HSK 5", levelId: "hsk5", live: false, description: "อ่านข่าวและสื่อสารเชิงลึก", parts: [{ name: "ฟัง", count: 0, minutes: 30 }, { name: "อ่าน", count: 0, minutes: 45 }, { name: "เขียน", count: 0, minutes: 40 }] },
+    { level: "HSK 6", levelId: "hsk6", live: false, description: "ใช้งานภาษาจีนระดับสูง", parts: [{ name: "ฟัง", count: 0, minutes: 35 }, { name: "อ่าน", count: 0, minutes: 50 }, { name: "เขียน", count: 0, minutes: 45 }] },
   ];
 
   return (
     <div className="admin-content">
-      <section className="admin-page-intro"><div><span className="admin-eyebrow">Exam Builder</span><h2>โครงสร้างระบบสอบ HSK</h2><p>วางโครงสร้างไว้ก่อน แล้วค่อยเติมข้อสอบจริงจากไฟล์ที่เตรียมไว้ภายหลัง</p></div><span className="admin-draft-badge">ร่างโครงสร้าง</span></section>
-      <section className="admin-exam-notice"><strong>พื้นที่เตรียมข้อสอบ</strong><span>ตอนนี้ยังไม่มีข้อสอบจริงในแต่ละพาร์ท เมนูนี้เตรียมไว้สำหรับนำเข้าข้อมูลภายหลัง</span></section>
-      <section className="admin-exam-grid">{examLevels.map((exam) => <article className="admin-card admin-exam-card" key={exam.level}><div className="admin-exam-heading"><div><span className="admin-card-kicker">Mock Exam</span><h3>{exam.level}</h3></div><span className="admin-draft-badge">Draft</span></div><p>{exam.description}</p><div className="admin-exam-parts">{exam.parts.map((part) => <div className="admin-exam-part" key={part.name}><span><strong>{part.name}</strong><small>{part.minutes} นาที</small></span><b>{part.count}<small>ข้อ</small></b></div>)}</div><button type="button" className="admin-outline-button" disabled>เพิ่มข้อสอบเร็วๆ นี้</button></article>)}</section>
+      <section className="admin-page-intro"><div><span className="admin-eyebrow">Exam Builder</span><h2>ระบบสอบ HSK</h2><p>กำหนดชุดเอกสาร พาร์ท รูปแบบ และเลขข้อให้แต่ละข้อสอบได้เอง</p></div><button type="button" className="admin-primary-button" onClick={() => setShowForm((current) => !current)}>{showForm ? "ปิดฟอร์ม" : "เพิ่มข้อสอบ"}</button></section>
+      {showForm && <form className="admin-card admin-vocabulary-form" onSubmit={createQuestion}><div className="admin-form-heading"><div><span className="admin-card-kicker">Question Builder</span><h3>เพิ่มข้อสอบรายข้อ</h3></div><span className="admin-required-note">คำตอบต้องตรงกับตัวเลือก</span></div><div className="admin-form-grid"><label>ระดับ HSK<select value={form.levelId} onChange={(event) => update("levelId", event.target.value)}>{[1, 2, 3, 4, 5, 6].map((level) => <option key={level} value={`hsk${level}`}>HSK {level}</option>)}</select></label><label>เลขเอกสารชุดสอบ *<input required value={form.documentId} onChange={(event) => update("documentId", event.target.value)} placeholder="เช่น H11329" /></label><label>พาร์ท<select value={form.part} onChange={(event) => update("part", event.target.value)}><option value="listening">听力 · ฟัง</option><option value="reading">阅读 · อ่าน</option><option value="writing">书写 · เขียน</option></select></label><label>ส่วนที่ / Section *<input required value={form.section} onChange={(event) => update("section", event.target.value)} placeholder="เช่น 1" /></label><label>รูปแบบข้อสอบ<select value={form.format} onChange={(event) => update("format", event.target.value)}><option value="choice">เลือกตอบ</option><option value="true-false">ถูก / ผิด</option><option value="image-choice">เลือกภาพ</option><option value="matching">จับคู่</option><option value="fill-blank">เติมคำ</option></select></label><label>เลขข้อ *<input required type="number" min="1" value={form.questionNumber} onChange={(event) => update("questionNumber", event.target.value)} /></label><label className="admin-form-wide">โจทย์ / ข้อความ *<textarea required rows={3} value={form.prompt} onChange={(event) => update("prompt", event.target.value)} placeholder="พิมพ์โจทย์ ภาษาจีน พินอิน หรือคำแปล" /></label>{form.choices.map((choice, index) => <label key={index}>ตัวเลือก {String.fromCharCode(65 + index)} *<input required value={choice} onChange={(event) => updateChoice(index, event.target.value)} /></label>)}<label>คำตอบที่ถูก *<select required value={form.answer} onChange={(event) => update("answer", event.target.value)}><option value="">เลือกคำตอบ</option>{form.choices.filter(Boolean).map((choice) => <option key={choice} value={choice}>{choice}</option>)}</select></label><label>URL รูปภาพ (ถ้ามี)<input value={form.mediaUrl} onChange={(event) => update("mediaUrl", event.target.value)} placeholder="https://..." /></label></div><div className="admin-form-actions"><span>ใช้เลขเอกสารเดียวกันเพื่อรวมข้อสอบเป็นชุดเดียว</span><button className="admin-primary-button" type="submit" disabled={saving}>{saving ? "กำลังบันทึก..." : "บันทึกข้อสอบ"}</button></div></form>}
+      <section className="admin-exam-notice"><strong>ชุดที่พร้อมใช้งาน</strong><span>HSK 1-4 มีข้อสอบ seed แล้ว ระบบจะบันทึกคะแนนลงสถิติทันทีเมื่อผู้เรียนตอบ</span></section>
+      <section className="admin-exam-grid">{examLevels.map((exam) => <article className="admin-card admin-exam-card" key={exam.level}><div className="admin-exam-heading"><div><span className="admin-card-kicker">Mock Exam</span><h3>{exam.level}</h3></div><span className="admin-draft-badge">{exam.live ? "Live" : "Draft"}</span></div><p>{exam.description}</p><div className="admin-exam-parts">{exam.parts.map((part) => <div className="admin-exam-part" key={part.name}><span><strong>{part.name}</strong><small>{part.minutes} นาที</small></span><b>{part.count}<small>ข้อ</small></b></div>)}</div>{exam.live ? <a className="admin-outline-button" href={`/quiz?level=${exam.levelId}`} target="_blank" rel="noreferrer">เปิด Mock Exam</a> : <button type="button" className="admin-outline-button" disabled>รอเพิ่มข้อสอบ</button>}</article>)}</section>
+      <section className="admin-card admin-table-card"><div className="admin-table-meta"><strong>ข้อสอบในระบบ {questions.length} ข้อ</strong><span>เรียงตามระดับ เอกสาร พาร์ท และเลขข้อ</span></div><div className="admin-table-scroll"><table className="admin-users-table"><thead><tr><th>ชุดเอกสาร</th><th>ระดับ / พาร์ท</th><th>ข้อ</th><th>รูปแบบ</th><th>โจทย์</th></tr></thead><tbody>{questions.map((question) => <tr key={question.id}><td><strong>{question.documentId}</strong><small>{question.section}</small></td><td>{question.levelId.toUpperCase()}<small>{question.part}</small></td><td>{question.questionNumber}</td><td>{question.format}</td><td>{question.prompt}</td></tr>)}</tbody></table>{!questions.length && <p className="admin-empty">ยังไม่มีข้อสอบที่เพิ่มจาก Admin</p>}</div></section>
     </div>
   );
 }
