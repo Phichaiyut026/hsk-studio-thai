@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { dailyTasks, hskLevels, type Level } from "../../lib/hsk-data";
@@ -261,9 +260,9 @@ export default function StatsClient({ authPaths, user }: Props) {
                     </div>
                     <div className="mt-3 flex items-center justify-between text-xs font-semibold text-[var(--muted)]">
                       <span>ถูก {level.correctAttempts} / {level.totalAttempts} ครั้ง</span>
-                      {isAdmin && <Link href={`/quiz?level=${level.levelId}`} prefetch={false} className="text-[var(--ink)] font-black hover:underline">
+                      {isAdmin && <a href={`/quiz?level=${level.levelId}`} className="text-[var(--ink)] font-black hover:underline">
                         ทำ Mock Exam
-                      </Link>}
+                      </a>}
                     </div>
                   </div>
                 ))}
@@ -281,13 +280,12 @@ export default function StatsClient({ authPaths, user }: Props) {
                     ? `ระดับนี้มีความถูกต้อง ${weakestLevel.accuracyPercent}% เหมาะกับการทบทวนรอบถัดไป`
                     : "ยังไม่มีประวัติสอบ ลองทำ Mock Exam สักชุดเพื่อให้ระบบแนะนำได้แม่นขึ้น"}
                 </p>
-                {isAdmin && <Link
+                {isAdmin && <a
                   href={weakestLevel ? `/quiz?level=${weakestLevel.levelId}` : "/quiz"}
-                  prefetch={false}
                   className="mt-5 inline-flex px-5 py-2.5 rounded-xl bg-[var(--ink)] text-white font-black text-sm"
                 >
                   เริ่มฝึกต่อ
-                </Link>}
+                </a>}
               </section>
 
               <section className="p-6 rounded-3xl bg-[var(--paper)] border border-[var(--line)] shadow-xs">
@@ -314,9 +312,9 @@ export default function StatsClient({ authPaths, user }: Props) {
                   ดูข้อผิดพลาดล่าสุดเพื่อกลับไปทบทวนจุดที่ยังไม่แม่น
                 </p>
               </div>
-              {isAdmin && <Link href="/quiz" prefetch={false} className="text-sm font-black text-[var(--ink)] hover:underline">
+              {isAdmin && <a href="/quiz" className="text-sm font-black text-[var(--ink)] hover:underline">
                 ไปหน้า Mock Exam
-              </Link>}
+              </a>}
             </div>
 
             {progress?.recentAttempts.length ? (
@@ -416,13 +414,12 @@ export default function StatsClient({ authPaths, user }: Props) {
                       <span className="text-[var(--muted)] font-semibold">
                         จำได้ {masteredInThisLevel} / {levelWordsCount} คำในระบบ
                       </span>
-                      <Link
+                      <a
                         href={`/vocabulary?level=${lvl.id}`}
-                        prefetch={false}
                         className="font-bold text-[var(--ink)] hover:underline"
                       >
                         ทบทวนศัพท์
-                      </Link>
+                      </a>
                     </div>
                   </div>
                 );
@@ -439,20 +436,18 @@ export default function StatsClient({ authPaths, user }: Props) {
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Link
+              <a
                 href="/vocabulary"
-                prefetch={false}
                 className="px-5 py-2.5 rounded-xl bg-white text-gray-900 font-black text-sm shadow-md hover:bg-gray-100 transition-all"
               >
                 ทบทวนบัตรคำ
-              </Link>
-              {isAdmin && <Link
+              </a>
+              {isAdmin && <a
                 href="/quiz"
-                prefetch={false}
                 className="px-5 py-2.5 rounded-xl bg-[var(--red)] text-white font-black text-sm shadow-md hover:opacity-90 transition-all"
               >
                 ทำแบบทดสอบ
-              </Link>}
+              </a>}
             </div>
           </div>
         </main>

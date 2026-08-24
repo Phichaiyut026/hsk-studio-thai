@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { hskLevels, type Level, type QuizItem } from "../../lib/hsk-data";
@@ -454,13 +453,12 @@ export default function QuizClient({ authPaths, user }: Props) {
                 >
                   ทำแบบทดสอบชุดนี้ใหม่
                 </button>
-                <Link
+                <a
                   href="/vocabulary"
-                  prefetch={false}
                   className="px-6 py-3 rounded-xl bg-white border border-[var(--line)] hover:bg-gray-50 text-[var(--ink)] font-bold text-sm shadow-xs transition-transform active:scale-95"
                 >
                   ไปทบทวนบัตรคำศัพท์
-                </Link>
+                </a>
               </div>
             </div>
           )}

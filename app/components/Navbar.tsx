@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -56,7 +55,7 @@ export default function Navbar({ authPaths, user }: NavbarProps) {
       <div className="site-navbar-inner">
         <div className="site-navbar-row">
           {/* Brand Logo */}
-          <Link href="/" prefetch={false} className="site-navbar-brand">
+          <a href="/" className="site-navbar-brand">
             <span className="site-navbar-mark">
               汉
             </span>
@@ -68,23 +67,22 @@ export default function Navbar({ authPaths, user }: NavbarProps) {
                 เรียนจีนสำหรับคนไทย
               </span>
             </span>
-          </Link>
+          </a>
 
           {/* Desktop Nav Items */}
           <nav className="site-navbar-menu">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
               return (
-                <Link
+                <a
                   key={item.href}
                   href={item.href}
-                  prefetch={false}
                   target={item.href === "/admin" ? "_blank" : undefined}
                   rel={item.href === "/admin" ? "noreferrer" : undefined}
                   className={`site-navbar-item ${isActive ? "is-active" : ""}`}
                 >
                   {item.label}
-                </Link>
+                </a>
               );
             })}
           </nav>
@@ -133,17 +131,16 @@ export default function Navbar({ authPaths, user }: NavbarProps) {
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             return (
-              <Link
+              <a
                 key={item.href}
                 href={item.href}
-                prefetch={false}
                 target={item.href === "/admin" ? "_blank" : undefined}
                 rel={item.href === "/admin" ? "noreferrer" : undefined}
                 onClick={() => setMobileMenuOpen(false)}
                 className={`site-navbar-mobile-item ${isActive ? "is-active" : ""}`}
               >
                 {item.label}
-              </Link>
+              </a>
             );
           })}
           <div className="site-navbar-mobile-account">
