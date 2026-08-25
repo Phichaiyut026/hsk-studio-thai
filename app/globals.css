@@ -18,6 +18,7 @@
   --color-foreground: var(--ink);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-noto-thai), var(--font-geist-sans), sans-serif;
 }
 
 * {
@@ -32,7 +33,7 @@ body {
   margin: 0;
   background: var(--page);
   color: var(--ink);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-noto-thai), var(--font-geist-sans), Arial, sans-serif;
 }
 
 button,
@@ -1147,6 +1148,64 @@ a {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Home learning dashboard */
+.home-shell { min-height: 100vh; display: flex; flex-direction: column; background: var(--page); color: var(--ink); }
+.home-shell main { flex: 1; }
+.home-hero { min-height: auto; padding-top: 54px; padding-bottom: 64px; }
+.home-hero .hero-copy h1 { max-width: 720px; text-wrap: balance; }
+.home-hero .eyebrow { letter-spacing: .08em; }
+.hero-proof { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 30px; color: var(--muted); font-size: .78rem; font-weight: 800; }
+.hero-proof span { display: inline-flex; align-items: center; gap: 6px; }
+.hero-proof strong { color: var(--ink); font-size: 1rem; }
+.word-card { min-height: 0; padding: 30px; }
+.word-card-date { margin-top: 20px; color: var(--muted); font-size: .72rem; font-weight: 800; }
+.status-badge, .streak-chip { display: inline-flex; align-items: center; min-height: 26px; padding: 0 9px; border-radius: 999px; background: #e6f2ed; color: var(--teal); font-size: .68rem; font-weight: 900; }
+.word-pinyin { display: block; font-size: 1.25rem; }
+.word-meaning { display: block; margin-top: 4px; color: var(--teal); font-size: .86rem; font-weight: 800; }
+.example-box { margin-top: 20px; padding: 14px; border: 1px solid #e8d7ae; border-radius: 8px; background: #fff5dc; }
+.example-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #7a5a16; font-size: .72rem; font-weight: 900; }
+.example-box p { margin: 8px 0 0; color: #4b3c1b; font-weight: 900; }
+.example-box small { display: block; margin-top: 4px; color: #806b3e; line-height: 1.5; }
+.compact-speak { min-height: 28px; padding: 0 7px; font-size: .68rem; }
+.shuffle-button { width: 100%; min-height: 42px; margin-top: 16px; border: 1px solid var(--line); border-radius: 7px; background: var(--paper-strong); color: var(--ink); cursor: pointer; font-size: .78rem; font-weight: 900; transition: transform 160ms ease, border-color 160ms ease, background 160ms ease; }
+.shuffle-button:hover { transform: translateY(-2px); border-color: var(--ink); background: var(--page); }
+.dashboard-section { max-width: 1180px; margin: 0 auto; padding: 70px clamp(18px, 4vw, 34px); }
+.dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(300px, .8fr); gap: 16px; }
+.progress-panel, .shortcut-panel { padding: 24px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); }
+.progress-heading { display: flex; align-items: start; justify-content: space-between; gap: 14px; }
+.panel-kicker { display: block; margin-bottom: 7px; color: var(--muted); font-size: .72rem; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; }
+.progress-heading strong { display: block; font-size: 2.8rem; line-height: 1; }
+.progress-track { height: 9px; margin-top: 22px; overflow: hidden; border-radius: 99px; background: #e7dfd4; }
+.progress-track span { display: block; height: 100%; border-radius: inherit; background: var(--teal); transition: width 400ms ease; }
+.progress-panel > p { margin: 14px 0 0; color: var(--muted); font-size: .82rem; line-height: 1.55; }
+.task-list { margin-top: 20px; }
+.task-row { display: grid; grid-template-columns: 20px 1fr auto; align-items: center; gap: 10px; min-height: 44px; border-top: 1px solid var(--line); color: var(--ink); cursor: pointer; font-size: .8rem; font-weight: 800; }
+.task-row input { width: 17px; height: 17px; accent-color: var(--teal); }
+.task-row small { color: var(--muted); font-size: .7rem; }
+.task-row.is-done span { color: var(--muted); text-decoration: line-through; }
+.shortcut-panel h3 { margin: 0 0 16px; font-size: 1.45rem; }
+.shortcut-list { display: grid; gap: 8px; }
+.shortcut-list a { display: flex; align-items: center; gap: 11px; padding: 11px; border: 1px solid transparent; border-radius: 7px; color: var(--ink); text-decoration: none; transition: border-color 160ms ease, background 160ms ease, transform 160ms ease; }
+.shortcut-list a:hover { transform: translateX(3px); border-color: var(--line); background: var(--page); }
+.shortcut-mark { display: grid; width: 35px; height: 35px; flex: 0 0 35px; place-items: center; border-radius: 7px; background: var(--ink); color: var(--paper); font-weight: 900; }
+.shortcut-list a > span:nth-child(2) { display: flex; flex: 1; flex-direction: column; gap: 3px; }
+.shortcut-list small { color: var(--muted); font-size: .7rem; }
+.shortcut-list b { color: var(--red); }
+.text-link { color: var(--red); font-size: .78rem; font-weight: 900; text-decoration: none; }
+.section-note { color: var(--muted); font-size: .78rem; font-weight: 800; }
+.levels-section { padding-top: 0; }
+.level-card { min-height: 200px; }
+.level-card-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.level-card-top > span { font-size: 1.3rem; font-weight: 900; }
+.level-card-top small { color: var(--muted); font-size: .72rem; font-weight: 900; }
+.level-card > p { margin: 10px 0 0; font-size: .82rem; font-weight: 800; line-height: 1.5; }
+.level-focus { color: var(--muted); font-size: .74rem; line-height: 1.5; }
+.level-actions { display: flex; gap: 8px; padding-top: 13px; border-top: 1px solid var(--line); }
+.level-actions a { flex: 1; padding: 9px; border-radius: 6px; background: var(--page); color: var(--ink); font-size: .72rem; font-weight: 900; text-align: center; text-decoration: none; }
+.level-actions a:hover { background: var(--ink); color: var(--paper); }
+@media (max-width: 880px) { .dashboard-grid { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
 
 /* Standalone admin console */
 .admin-shell {
