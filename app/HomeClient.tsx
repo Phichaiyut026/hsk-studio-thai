@@ -51,7 +51,7 @@ export default function HomeClient({ authPaths, user, isAdmin }: Props) {
   const completion = Math.round((checkedTasks.length / dailyTasks.length) * 100);
 
   return (
-    <div className="min-h-screen bg-[var(--page)] text-[var(--ink)] flex flex-col justify-between">
+    <div className="app-page min-h-screen text-[var(--ink)] flex flex-col justify-between">
       <div>
         <Navbar authPaths={authPaths} user={user} isAdmin={isAdmin} />
 

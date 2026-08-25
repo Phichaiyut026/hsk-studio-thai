@@ -294,13 +294,19 @@ a {
   }
 }
 
+.app-page {
+  background-color: var(--page);
+  background-image:
+    linear-gradient(rgba(221, 212, 199, 0.52) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(221, 212, 199, 0.52) 1px, transparent 1px);
+  background-size: 48px 48px;
+  background-attachment: fixed;
+}
+
 .hero {
   min-height: 92vh;
   padding: 24px clamp(18px, 5vw, 72px) 56px;
-  background:
-    linear-gradient(135deg, rgba(221, 75, 57, 0.12), transparent 34%),
-    linear-gradient(225deg, rgba(47, 109, 181, 0.16), transparent 36%),
-    var(--page);
+  background: transparent;
   border-bottom: 1px solid var(--line);
 }
 
@@ -427,12 +433,48 @@ a {
 .primary-action,
 .secondary-action {
   padding: 0 22px;
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, border-color 160ms ease;
 }
 
 .primary-action {
   color: white;
   background: var(--red);
   box-shadow: 0 16px 34px rgba(221, 75, 57, 0.22);
+}
+
+.primary-action::after,
+.secondary-action::after {
+  content: "→";
+  margin-left: 10px;
+  font-size: 1.05rem;
+  line-height: 1;
+  transition: transform 160ms ease;
+}
+
+.primary-action:hover,
+.secondary-action:hover {
+  transform: translateY(-3px);
+}
+
+.primary-action:hover {
+  background: #c83d2d;
+  box-shadow: 0 20px 38px rgba(221, 75, 57, 0.3);
+}
+
+.secondary-action:hover {
+  border-color: var(--ink);
+  background: var(--paper-strong);
+  box-shadow: 0 12px 26px rgba(31, 36, 40, 0.1);
+}
+
+.primary-action:hover::after,
+.secondary-action:hover::after {
+  transform: translateX(4px);
+}
+
+.primary-action:active,
+.secondary-action:active {
+  transform: translateY(-1px);
 }
 
 .secondary-action {
@@ -1111,6 +1153,11 @@ a {
   display: flex;
   min-height: 100vh;
   background: #f2f5f7;
+  background-image:
+    linear-gradient(rgba(207, 218, 221, 0.44) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(207, 218, 221, 0.44) 1px, transparent 1px);
+  background-size: 48px 48px;
+  background-attachment: fixed;
   color: var(--ink);
 }
 
