@@ -1,5 +1,5 @@
 import { getChatGPTUser } from "../../../chatgpt-auth";
-import { addQuizQuestion, ensureUserProfile, listQuizQuestions } from "../../../../lib/hsk-db";
+import { addQuizQuestion, deleteQuizQuestion, ensureUserProfile, listQuizQuestions, updateQuizQuestion } from "../../../../lib/hsk-db";
 
 async function getAdmin() {
   const user = await getChatGPTUser();
@@ -66,5 +66,42 @@ export async function POST(request: Request) {
     return Response.json({ ok: true, question: await addQuizQuestion(values) }, { status: 201 });
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "Unexpected error" }, { status: 400 });
+  }
+}
+
+async function parseQuestionPayload(request: Request) {
+  const payload = (await request.json()) as {
+    levelId?: string; documentId?: string; part?: string; section?: string; format?: string;
+    questionNumber?: number; prompt?: string; choices?: string[]; answer?: string; mediaUrl?: string; imageUrl?: string;
+  };
+  return {
+    levelId: payload.levelId?.trim() ?? "", documentId: payload.documentId?.trim() ?? "", part: payload.part?.trim() ?? "",
+    section: payload.section?.trim() ?? "", format: payload.format?.trim() ?? "", questionNumber: Number(payload.questionNumber ?? 0),
+    prompt: payload.prompt?.trim() ?? "", choices: Array.isArray(payload.choices) ? payload.choices.map((choice) => choice.trim()).filter(Boolean) : [],
+    answer: payload.answer?.trim() ?? "", mediaUrl: payload.mediaUrl?.trim() ?? "", imageUrl: payload.imageUrl?.trim() ?? "",
+  };
+}
+
+export async function PATCH(request: Request) {
+  try {
+    if (!(await getAdmin())) return Response.json({ error: "Admin access required" }, { status: 403 });
+    const id = new URL(request.url).searchParams.get("id");
+    if (!id) return Response.json({ error: "Missing question id" }, { status: 400 });
+    const values = await parseQuestionPayload(request);
+    if (!values.levelId || !values.documentId || !values.part || !values.section || !values.format || !values.questionNumber || !values.prompt && !(values.part === "listening" && ["true-false", "image-choice", "matching"].includes(values.format)) || values.choices.length < 2 || !values.answer || !values.choices.includes(values.answer)) return Response.json({ error: "ข้อมูลข้อสอบไม่ครบ" }, { status: 400 });
+    return Response.json({ ok: true, question: await updateQuizQuestion(id, values) });
+  } catch (error) {
+    return Response.json({ error: error instanceof Error ? error.message : "แก้ไขข้อสอบไม่สำเร็จ" }, { status: 400 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    if (!(await getAdmin())) return Response.json({ error: "Admin access required" }, { status: 403 });
+    const id = new URL(request.url).searchParams.get("id");
+    if (!id) return Response.json({ error: "Missing question id" }, { status: 400 });
+    return Response.json({ ok: true, question: await deleteQuizQuestion(id) });
+  } catch (error) {
+    return Response.json({ error: error instanceof Error ? error.message : "ลบข้อสอบไม่สำเร็จ" }, { status: 400 });
   }
 }

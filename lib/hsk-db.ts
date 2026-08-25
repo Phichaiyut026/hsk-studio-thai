@@ -562,6 +562,23 @@ export async function addQuizQuestion(input: {
   return { id };
 }
 
+export async function updateQuizQuestion(id: string, input: {
+  levelId: string; documentId: string; part: string; section: string; format: string;
+  questionNumber: number; prompt: string; choices: string[]; answer: string; mediaUrl?: string; imageUrl?: string;
+}) {
+  await ensureHskSchema();
+  await env.DB.prepare(
+    `UPDATE quiz_questions SET level_id = ?, document_id = ?, part = ?, section = ?, format = ?, question_number = ?, prompt = ?, choices_json = ?, answer = ?, media_url = ?, image_url = ? WHERE id = ?`,
+  ).bind(input.levelId, input.documentId, input.part, input.section, input.format, input.questionNumber, input.prompt, JSON.stringify(input.choices), input.answer, input.mediaUrl?.trim() || null, input.imageUrl?.trim() || null, id).run();
+  return { id };
+}
+
+export async function deleteQuizQuestion(id: string) {
+  await ensureHskSchema();
+  await env.DB.prepare("DELETE FROM quiz_questions WHERE id = ?").bind(id).run();
+  return { id };
+}
+
 type HuggingFaceHskRow = {
   level?: number;
   hanzi?: string;
