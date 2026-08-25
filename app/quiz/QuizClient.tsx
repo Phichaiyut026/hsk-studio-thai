@@ -46,6 +46,7 @@ function getSessionId() {
 export default function QuizClient({ authPaths, user, isAdmin }: Props) {
   const [levels, setLevels] = useState<Level[]>(hskLevels);
   const [selectedLevelId, setSelectedLevelId] = useState<string>("hsk1");
+  const [selectedExamId, setSelectedExamId] = useState("all");
   const [questionIndex, setQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState("");
   const [isAnswerSubmitted, setIsAnswerSubmitted] = useState(false);
@@ -63,13 +64,36 @@ export default function QuizClient({ authPaths, user, isAdmin }: Props) {
     return levels.find((l) => l.id === selectedLevelId) || levels[0] || hskLevels[0];
   }, [levels, selectedLevelId]);
 
-  const questionsList: QuizItem[] = useMemo(() => {
+  const allQuestions: QuizItem[] = useMemo(() => {
     return activeLevel.quizzes && activeLevel.quizzes.length > 0
       ? activeLevel.quizzes
       : [activeLevel.quiz];
   }, [activeLevel]);
 
+  const examSets = useMemo(() => {
+    const sets = new Map<string, QuizItem[]>();
+    allQuestions.forEach((question) => {
+      const key = question.documentId ?? "H11329";
+      sets.set(key, [...(sets.get(key) ?? []), question]);
+    });
+    return Array.from(sets.entries()).map(([id, questions]) => ({ id, questions }));
+  }, [allQuestions]);
+
+  const questionsList = useMemo(() => {
+    if (selectedExamId === "all") return allQuestions;
+    return examSets.find((exam) => exam.id === selectedExamId)?.questions ?? allQuestions;
+  }, [allQuestions, examSets, selectedExamId]);
+
   const currentQuestion = questionsList[questionIndex] || questionsList[0];
+
+  const sectionAudioUrl = useMemo(() => {
+    if (!currentQuestion || currentQuestion.part !== "listening") return "";
+    return questionsList.find((question) =>
+      question.part === "listening" &&
+      question.documentId === currentQuestion.documentId &&
+      question.mediaUrl,
+    )?.mediaUrl ?? "";
+  }, [currentQuestion, questionsList]);
 
   const shuffledChoices = useMemo(() => {
     const choices = currentQuestion?.choices ?? [];
@@ -143,6 +167,7 @@ export default function QuizClient({ authPaths, user, isAdmin }: Props) {
 
   function handleSelectLevel(levelId: string) {
     setSelectedLevelId(levelId);
+    setSelectedExamId("all");
     setQuestionIndex(0);
     setSelectedAnswer("");
     setIsAnswerSubmitted(false);
@@ -238,13 +263,13 @@ export default function QuizClient({ authPaths, user, isAdmin }: Props) {
   }
 
   return (
-    <div className="app-page min-h-screen text-[var(--ink)] flex flex-col justify-between">
+    <div className={`app-page quiz-page min-h-screen text-[var(--ink)] flex flex-col justify-between ${examStarted && !isFinished ? "quiz-live" : ""}`}>
       <div>
         <Navbar authPaths={authPaths} user={user} isAdmin={isAdmin} />
 
-        <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="quiz-main max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header */}
-          <div className="mb-8 text-center sm:text-left">
+          <div className="quiz-page-header mb-8 text-center sm:text-left">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-bold uppercase tracking-wider mb-2">
               แบบทดสอบ & วัดระดับ
             </div>
@@ -275,7 +300,7 @@ export default function QuizClient({ authPaths, user, isAdmin }: Props) {
           </div>
 
           {/* Level Tabs */}
-          <div className="flex flex-wrap gap-2 mb-8">
+          <div className="quiz-level-tabs flex flex-wrap gap-2 mb-8">
             {levels.map((lvl) => {
               const levelProgress = progress?.levels.find((item) => item.levelId === lvl.id);
               return (
@@ -300,7 +325,7 @@ export default function QuizClient({ authPaths, user, isAdmin }: Props) {
           </div>
 
           {!examStarted && !isFinished ? (
-            <div className="p-6 sm:p-10 rounded-3xl bg-[var(--paper)] border border-[var(--line)] shadow-lg">
+            <div className="quiz-start-screen p-6 sm:p-10 rounded-3xl bg-[var(--paper)] border border-[var(--line)] shadow-lg">
               <div className="max-w-2xl mx-auto text-center space-y-6">
                 <div className="mx-auto w-16 h-16 rounded-full bg-[var(--ink)] text-white grid place-items-center text-2xl font-black">试</div>
                 <div>
@@ -308,6 +333,17 @@ export default function QuizClient({ authPaths, user, isAdmin }: Props) {
                   <h2 className="text-3xl sm:text-4xl font-black mt-2">{activeLevel.title} 模拟考试</h2>
                   <p className="text-[var(--muted)] mt-3">จำลองบรรยากาศการสอบจริง ทำข้อสอบให้ครบก่อนส่ง และจะเห็นเฉลยพร้อมคะแนนหลังจบเท่านั้น</p>
                 </div>
+                <label className="quiz-exam-selector">
+                  <span>เลือกชุดข้อสอบ</span>
+                  <select value={selectedExamId} onChange={(event) => setSelectedExamId(event.target.value)}>
+                    <option value="all">รวมทุกชุดข้อสอบ ({allQuestions.length} ข้อ)</option>
+                    {examSets.map((exam) => (
+                      <option key={exam.id} value={exam.id}>
+                        ชุด {exam.id} ({exam.questions.length} ข้อ)
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-left">
                   {[
                     ["จำนวนข้อ", `${questionsList.length} ข้อ`],
@@ -325,13 +361,13 @@ export default function QuizClient({ authPaths, user, isAdmin }: Props) {
             </div>
           ) : !isFinished ? (
             /* Quiz In Progress */
-            <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-xl bg-[var(--ink)] text-white shadow-md">
+            <div className="quiz-session space-y-4">
+              <div className="quiz-session-bar flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-xl bg-[var(--ink)] text-white shadow-md">
                 <div><span className="text-[10px] uppercase tracking-widest opacity-60">{currentQuestion.documentId ?? "H11329"} · Mock Examination</span><strong className="block text-lg">{activeLevel.title} · {currentQuestion.part === "listening" ? "听力 ฟัง" : currentQuestion.part === "writing" ? "书写 เขียน" : "阅读 อ่าน"} · ส่วนที่ {currentQuestion.section ?? "1"}</strong></div>
                 <div className={`font-mono text-xl font-black ${remainingSeconds < 300 ? "text-red-300" : "text-amber-200"}`}>เวลาเหลือ {timeLabel}</div>
               </div>
-              <div className="grid lg:grid-cols-[minmax(0,1fr)_210px] gap-4 items-start">
-              <div className="p-6 sm:p-10 rounded-3xl bg-[var(--paper)] border border-[var(--line)] shadow-lg space-y-6">
+              <div className="quiz-session-layout grid lg:grid-cols-[minmax(0,1fr)_210px] gap-4 items-start">
+              <div className="quiz-question-card p-6 sm:p-10 rounded-3xl bg-[var(--paper)] border border-[var(--line)] shadow-lg space-y-6">
               {/* Progress bar */}
               <div>
                 <div className="flex items-center justify-between text-xs font-bold text-[var(--muted)] mb-2">
@@ -355,7 +391,12 @@ export default function QuizClient({ authPaths, user, isAdmin }: Props) {
                 <span className="text-xs font-bold text-[var(--red)] uppercase tracking-wider block mb-1">
                   ข้อ {currentQuestion.questionNumber ?? questionIndex + 1} · {currentQuestion.format ?? "choice"} ({activeLevel.title})
                 </span>
-                {currentQuestion.mediaUrl && <img src={currentQuestion.mediaUrl} alt="ภาพประกอบข้อสอบ" className="max-h-48 max-w-full object-contain rounded-lg border border-[var(--line)] mb-4" />}
+                {sectionAudioUrl && (
+                  <audio controls preload="metadata" src={sectionAudioUrl} className="quiz-audio-player mb-4">เบราว์เซอร์นี้ไม่รองรับการเล่นเสียง</audio>
+                )}
+                {(currentQuestion.imageUrl || (currentQuestion.mediaUrl && currentQuestion.part !== "listening")) && (
+                  <img src={currentQuestion.imageUrl || currentQuestion.mediaUrl} alt="ภาพประกอบข้อสอบ" className="max-h-48 max-w-full object-contain rounded-lg border border-[var(--line)] mb-4" />
+                )}
                 <h2 className="text-xl sm:text-2xl font-black text-[var(--ink)] leading-snug">
                   {currentQuestion.prompt}
                 </h2>
@@ -377,7 +418,7 @@ export default function QuizClient({ authPaths, user, isAdmin }: Props) {
                       onClick={() => handleChooseAnswer(choice)}
                       className={`p-4 rounded-2xl border text-left text-base font-bold transition-all shadow-xs flex items-center justify-between ${btnStyle}`}
                     >
-                      <span>{choice}</span>
+                      <span className="flex items-center gap-3">{(currentQuestion.format === "image-choice" || (currentQuestion.part === "listening" && currentQuestion.format === "matching")) && (() => { try { const urls = JSON.parse(currentQuestion.imageUrl || "[]") as string[]; return urls[currentQuestion.choices.indexOf(choice)] ? <img src={urls[currentQuestion.choices.indexOf(choice)]} alt={`ตัวเลือก ${choice}`} className="h-24 w-24 object-contain rounded-lg border border-[var(--line)]" /> : null; } catch { return null; } })()}<span>{choice}</span></span>
                       {isSelected && <span className="text-xs font-bold text-[var(--teal)]">คำตอบของคุณ</span>}
                     </button>
                   );
@@ -405,7 +446,7 @@ export default function QuizClient({ authPaths, user, isAdmin }: Props) {
                 </div>
               )}
               </div>
-              <aside className="p-4 rounded-2xl bg-[var(--paper)] border border-[var(--line)] shadow-sm lg:sticky lg:top-4">
+              <aside className="quiz-answer-sheet p-4 rounded-2xl bg-[var(--paper)] border border-[var(--line)] shadow-sm lg:sticky lg:top-4">
                 <div className="flex items-center justify-between mb-3"><strong className="text-sm">กระดาษคำตอบ</strong><span className="text-xs text-[var(--muted)]">{answeredCount}/{questionsList.length}</span></div>
                 <div className="grid grid-cols-5 gap-2">{questionsList.map((_, index) => <button key={index} type="button" onClick={() => { setQuestionIndex(index); setSelectedAnswer(answers[index] || ""); setIsAnswerSubmitted(Boolean(answers[index])); }} className={`aspect-square rounded-lg text-xs font-black border ${index === questionIndex ? "bg-[var(--ink)] text-white border-[var(--ink)]" : answers[index] ? "bg-teal-50 text-teal-900 border-teal-300" : "bg-white text-[var(--muted)] border-[var(--line)]"}`}>{index + 1}</button>)}</div>
                 <div className="mt-4 space-y-2 text-xs text-[var(--muted)]"><p><span className="inline-block w-2.5 h-2.5 rounded-sm bg-teal-100 border border-teal-300 mr-2" />ตอบแล้ว</p><p><span className="inline-block w-2.5 h-2.5 rounded-sm bg-white border border-[var(--line)] mr-2" />ยังไม่ได้ตอบ</p></div>
@@ -415,7 +456,7 @@ export default function QuizClient({ authPaths, user, isAdmin }: Props) {
             </div>
           ) : (
             /* Quiz Completed Result Screen */
-            <div className="p-8 sm:p-12 rounded-3xl bg-[var(--paper)] border border-[var(--line)] shadow-xl text-center space-y-6">
+            <div className="quiz-result-screen p-8 sm:p-12 rounded-3xl bg-[var(--paper)] border border-[var(--line)] shadow-xl text-center space-y-6">
               <div className="space-y-2">
                 <span className="text-xs font-black uppercase tracking-wider text-[var(--muted)]">
                   ทำแบบทดสอบ {activeLevel.title} เสร็จสิ้น

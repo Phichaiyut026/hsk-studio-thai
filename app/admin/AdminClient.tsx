@@ -307,28 +307,191 @@ function VocabularyListPanel({ vocabulary, query, setQuery, level, setLevel, set
   );
 }
 
+type ExamSectionBlueprint = {
+  id: string;
+  label: string;
+  from: number;
+  to: number;
+  format: "choice" | "true-false" | "image-choice" | "matching" | "fill-blank";
+};
+
+type ExamPartBlueprint = {
+  id: "listening" | "reading" | "writing";
+  label: string;
+  count: number;
+  minutes: number;
+  sections: ExamSectionBlueprint[];
+};
+
+const fallbackExamParts: ExamPartBlueprint[] = [
+  { id: "listening", label: "听力 · การฟัง", count: 20, minutes: 15, sections: [{ id: "1", label: "ส่วนที่ 1", from: 1, to: 20, format: "choice" }] },
+  { id: "reading", label: "阅读 · การอ่าน", count: 20, minutes: 17, sections: [{ id: "1", label: "ส่วนที่ 1", from: 21, to: 40, format: "choice" }] },
+];
+
+const examBlueprints: Record<string, { total: number; minutes: number; passingScore: number; parts: ExamPartBlueprint[]; note: string }> = {
+  hsk1: {
+    total: 40,
+    minutes: 35,
+    passingScore: 120,
+    note: "HSK 1 มี 2 พาร์ต รวม 40 ข้อ โดยมีพินอินกำกับอักษรจีนทุกตัว",
+    parts: [
+      {
+        id: "listening",
+        label: "听力 · การฟัง",
+        count: 20,
+        minutes: 15,
+        sections: [
+          { id: "1", label: "ส่วนที่ 1 · ฟังประโยค/คำ แล้วดูภาพ ถูก/ผิด", from: 1, to: 5, format: "true-false" },
+          { id: "2", label: "ส่วนที่ 2 · ฟังประโยคแล้วเลือกภาพ", from: 6, to: 10, format: "image-choice" },
+          { id: "3", label: "ส่วนที่ 3 · ฟังบทสนทนาแล้วจับคู่ภาพ", from: 11, to: 15, format: "matching" },
+          { id: "4", label: "ส่วนที่ 4 · ฟังบทสนทนาและคำถาม", from: 16, to: 20, format: "choice" },
+        ],
+      },
+      {
+        id: "reading",
+        label: "阅读 · การอ่าน",
+        count: 20,
+        minutes: 17,
+        sections: [
+          { id: "1", label: "ส่วนที่ 1 · ดูภาพและคำศัพท์ ถูก/ผิด", from: 21, to: 25, format: "true-false" },
+          { id: "2", label: "ส่วนที่ 2 · ดูภาพแล้วจับคู่ประโยค", from: 26, to: 30, format: "matching" },
+          { id: "3", label: "ส่วนที่ 3 · จับคู่คำถามและคำตอบ", from: 31, to: 35, format: "matching" },
+          { id: "4", label: "ส่วนที่ 4 · เติมคำในช่องว่าง", from: 36, to: 40, format: "fill-blank" },
+        ],
+      },
+    ],
+  },
+};
+
 function ExamsPanel({ questions, setMessage, onSaved }: { questions: AdminQuestion[]; setMessage: (message: string) => void; onSaved: () => Promise<void> }) {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ levelId: "hsk1", documentId: "H11329", part: "reading", section: "1", format: "choice", questionNumber: "1", prompt: "", choices: ["", "", "", ""], answer: "", mediaUrl: "" });
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [choiceImageFiles, setChoiceImageFiles] = useState<Array<File | null>>([null, null, null, null, null]);
+  const [form, setForm] = useState({ levelId: "hsk1", documentId: "H11329", part: "listening", section: "1", format: "true-false", questionNumber: "1", prompt: "", choices: ["", "", "", ""], answer: "", mediaUrl: "" });
   const update = (field: string, value: string) => setForm((current) => ({ ...current, [field]: value }));
   const updateChoice = (index: number, value: string) => setForm((current) => ({ ...current, choices: current.choices.map((choice, choiceIndex) => choiceIndex === index ? value : choice) }));
+  const blueprint = examBlueprints[form.levelId] ?? { total: 40, minutes: 35, passingScore: 120, note: "โครงสร้างพื้นฐานสำหรับระดับนี้ กรุณาตรวจสอบ Blueprint ก่อนเพิ่มข้อสอบ", parts: fallbackExamParts };
+  const activePart = blueprint.parts.find((part) => part.id === form.part) ?? blueprint.parts[0];
+  const activeSection = activePart.sections.find((section) => section.id === form.section) ?? activePart.sections[0];
+  const isListeningTrueFalse = form.part === "listening" && form.section === "1" && form.format === "true-false";
+  const isListeningImageChoice = form.part === "listening" && form.format === "image-choice";
+  const isListeningImageMatching = form.part === "listening" && form.section === "3" && form.format === "matching";
+
+  function updateLevel(levelId: string) {
+    const nextBlueprint = examBlueprints[levelId] ?? { total: 40, minutes: 35, passingScore: 120, note: "โครงสร้างพื้นฐานสำหรับระดับนี้ กรุณาตรวจสอบ Blueprint ก่อนเพิ่มข้อสอบ", parts: fallbackExamParts };
+    const nextPart = nextBlueprint.parts[0];
+    const nextSection = nextPart.sections[0];
+    setForm((current) => ({ ...current, levelId, part: nextPart.id, section: nextSection.id, format: nextSection.format, questionNumber: String(nextSection.from) }));
+  }
+
+  function updatePart(partId: string) {
+    const nextPart = blueprint.parts.find((part) => part.id === partId) ?? blueprint.parts[0];
+    const nextSection = nextPart.sections[0];
+    setForm((current) => ({ ...current, part: nextPart.id, section: nextSection.id, format: nextSection.format, questionNumber: String(nextSection.from) }));
+  }
+
+  function updateSection(sectionId: string) {
+    const nextSection = activePart.sections.find((section) => section.id === sectionId) ?? activePart.sections[0];
+    setForm((current) => ({ ...current, section: nextSection.id, format: nextSection.format, questionNumber: String(nextSection.from) }));
+  }
+
+  function updateQuestionNumber(value: string) {
+    const number = Number(value);
+    const matchingSection = activePart.sections.find((section) => number >= section.from && number <= section.to);
+    setForm((current) => ({ ...current, questionNumber: value, ...(matchingSection ? { section: matchingSection.id, format: matchingSection.format } : {}) }));
+  }
   async function createQuestion(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
-    const response = await fetch("/api/admin/exams", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, questionNumber: Number(form.questionNumber), choices: form.choices }) });
+    let mediaUrl = form.mediaUrl;
+    let imageUrl = "";
+    if (audioFile || imageFile || choiceImageFiles.some(Boolean)) {
+      setUploadingMedia(true);
+      for (const [file, target] of [[audioFile, "audio"], [imageFile, "image"]] as const) {
+        if (!file) continue;
+        const uploadData = new FormData();
+        uploadData.append("file", file);
+        const uploadResponse = await fetch("/api/admin/media", { method: "POST", body: uploadData });
+        const uploadResult = (await uploadResponse.json().catch(() => ({}))) as { mediaUrl?: string; error?: string };
+        if (!uploadResponse.ok || !uploadResult.mediaUrl) {
+          setUploadingMedia(false);
+          setMessage(uploadResult.error ?? "อัปโหลดไฟล์ไม่สำเร็จ");
+          setSaving(false);
+          return;
+        }
+        if (target === "audio") mediaUrl = uploadResult.mediaUrl;
+        else imageUrl = uploadResult.mediaUrl;
+      }
+      if (activeSection.format === "image-choice" || isListeningImageMatching) {
+        const choiceImageUrls: string[] = [];
+        for (const file of choiceImageFiles) {
+          if (!file) { choiceImageUrls.push(""); continue; }
+          const uploadData = new FormData();
+          uploadData.append("file", file);
+          const uploadResponse = await fetch("/api/admin/media", { method: "POST", body: uploadData });
+          const uploadResult = (await uploadResponse.json().catch(() => ({}))) as { mediaUrl?: string; error?: string };
+          if (!uploadResponse.ok || !uploadResult.mediaUrl) {
+            setUploadingMedia(false);
+            setMessage(uploadResult.error ?? "อัปโหลดรูปตัวเลือกไม่สำเร็จ");
+            setSaving(false);
+            return;
+          }
+          choiceImageUrls.push(uploadResult.mediaUrl);
+        }
+        imageUrl = JSON.stringify(choiceImageUrls);
+      }
+      setUploadingMedia(false);
+    }
+    const response = await fetch("/api/admin/exams", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, prompt: isListeningTrueFalse || isListeningImageChoice || isListeningImageMatching ? "" : form.prompt, mediaUrl, imageUrl, questionNumber: Number(form.questionNumber), choices: isListeningTrueFalse ? ["ถูก", "ผิด"] : activeSection.format === "image-choice" ? ["A", "B", "C"] : isListeningImageMatching ? ["A", "B", "C", "D", "E"] : form.choices }) });
     const data = (await response.json().catch(() => ({}))) as { error?: string };
-    if (response.ok) { setMessage("เพิ่มข้อสอบเรียบร้อย"); setShowForm(false); setForm({ ...form, prompt: "", choices: ["", "", "", ""], answer: "", mediaUrl: "" }); await onSaved(); } else setMessage(data.error ?? "เพิ่มข้อสอบไม่สำเร็จ");
+    if (response.ok) { setMessage("เพิ่มข้อสอบเรียบร้อย"); setShowForm(false); setAudioFile(null); setImageFile(null); setChoiceImageFiles([null, null, null, null, null]); setForm({ ...form, prompt: "", choices: ["", "", "", ""], answer: "", mediaUrl: "" }); await onSaved(); } else setMessage(data.error ?? "เพิ่มข้อสอบไม่สำเร็จ");
     setSaving(false);
   }
   const examLevels = [
-    { level: "HSK 1", levelId: "hsk1", live: true, description: "พื้นฐานการสื่อสารในชีวิตประจำวัน", parts: [{ name: "คำศัพท์", count: 2, minutes: 8 }, { name: "อ่าน", count: 2, minutes: 8 }] },
+    { level: "HSK 1", levelId: "hsk1", live: true, description: "ข้อสอบ 2 พาร์ต 40 ข้อ พร้อมพินอินกำกับอักษรจีน", parts: [{ name: "听力 · ฟัง", count: 20, minutes: 15 }, { name: "阅读 · อ่าน", count: 20, minutes: 17 }] },
     { level: "HSK 2", levelId: "hsk2", live: true, description: "ประโยคและบทสนทนาที่ใช้บ่อย", parts: [{ name: "ไวยากรณ์", count: 2, minutes: 10 }, { name: "อ่าน", count: 2, minutes: 10 }] },
     { level: "HSK 3", levelId: "hsk3", live: true, description: "สื่อสารเรื่องทั่วไปและข้อความสั้น", parts: [{ name: "ไวยากรณ์", count: 2, minutes: 12 }, { name: "อ่าน", count: 2, minutes: 12 }] },
     { level: "HSK 4", levelId: "hsk4", live: true, description: "เข้าใจเนื้อหาที่ซับซ้อนขึ้น", parts: [{ name: "ไวยากรณ์", count: 2, minutes: 12 }, { name: "อ่าน", count: 2, minutes: 12 }] },
     { level: "HSK 5", levelId: "hsk5", live: false, description: "อ่านข่าวและสื่อสารเชิงลึก", parts: [{ name: "ฟัง", count: 0, minutes: 30 }, { name: "อ่าน", count: 0, minutes: 45 }, { name: "เขียน", count: 0, minutes: 40 }] },
     { level: "HSK 6", levelId: "hsk6", live: false, description: "ใช้งานภาษาจีนระดับสูง", parts: [{ name: "ฟัง", count: 0, minutes: 35 }, { name: "อ่าน", count: 0, minutes: 50 }, { name: "เขียน", count: 0, minutes: 45 }] },
   ];
+
+    const choiceCount = activeSection.format === "true-false" ? 2 : activeSection.format === "image-choice" ? 3 : isListeningImageMatching ? 5 : 4;
+
+  if (showForm) {
+    return (
+      <div className="admin-content">
+        <section className="admin-page-intro">
+          <div><span className="admin-eyebrow">Exam Builder</span><h2>เพิ่มข้อสอบตาม Blueprint</h2><p>กรอกข้อสอบให้ตรงกับพาร์ต ส่วน และช่วงเลขข้อของระดับที่เลือก</p></div>
+          <button type="button" className="admin-outline-button admin-form-close" onClick={() => setShowForm(false)}>ปิดฟอร์ม</button>
+        </section>
+        <section className="admin-card admin-exam-blueprint">
+          <div><span className="admin-card-kicker">{form.levelId.toUpperCase()} Blueprint</span><h3>โครงสร้างข้อสอบ {form.levelId.toUpperCase()}</h3><p>{blueprint.note}</p></div>
+          <div className="admin-blueprint-summary"><span><b>{blueprint.total}</b> ข้อ</span><span><b>{blueprint.minutes}</b> นาที</span><span>ผ่าน <b>{blueprint.passingScore}</b> คะแนน</span></div>
+        </section>
+        <form className="admin-card admin-vocabulary-form" onSubmit={createQuestion}>
+          <div className="admin-form-heading"><div><span className="admin-card-kicker">Question Builder</span><h3>ข้อมูลข้อสอบ</h3></div><span className="admin-required-note">รูปแบบปัจจุบัน: {activeSection.format}</span></div>
+          <div className="admin-form-grid">
+            <label>ระดับ HSK<select value={form.levelId} onChange={(event) => updateLevel(event.target.value)}>{[1, 2, 3, 4, 5, 6].map((level) => <option key={level} value={`hsk${level}`}>HSK {level}</option>)}</select></label>
+            <label>เลขเอกสารชุดสอบ *<input required value={form.documentId} onChange={(event) => update("documentId", event.target.value)} placeholder="เช่น H11329" /></label>
+            <label>พาร์ตข้อสอบ<select value={activePart.id} onChange={(event) => updatePart(event.target.value)}>{blueprint.parts.map((part) => <option key={part.id} value={part.id}>{part.label} · {part.count} ข้อ · {part.minutes} นาที</option>)}</select></label>
+            <label>ส่วนที่ / Section<select value={activeSection.id} onChange={(event) => updateSection(event.target.value)}>{activePart.sections.map((section) => <option key={section.id} value={section.id}>{section.label} · ข้อ {section.from}-{section.to}</option>)}</select></label>
+            <label>รูปแบบข้อสอบ<input readOnly value={activeSection.format} /></label>
+            <label>เลขข้อ *<input required type="number" min={activeSection.from} max={activeSection.to} value={form.questionNumber} onChange={(event) => updateQuestionNumber(event.target.value)} /></label>
+            {!isListeningTrueFalse && !isListeningImageChoice && !isListeningImageMatching && <label className="admin-form-wide">โจทย์ / ข้อความ *<textarea required rows={3} value={form.prompt} onChange={(event) => update("prompt", event.target.value)} placeholder="พิมพ์โจทย์ พร้อมพินอินกำกับเมื่อเป็น HSK 1" /></label>}
+            {!isListeningTrueFalse && (activeSection.format === "image-choice" || isListeningImageMatching ? Array.from({ length: isListeningImageMatching ? 5 : 3 }, (_, index) => index).map((index) => <label key={index}>รูปตัวเลือก {String.fromCharCode(65 + index)} *<input required type="file" accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif" onChange={(event) => setChoiceImageFiles((current) => current.map((file, fileIndex) => fileIndex === index ? (event.target.files?.[0] ?? null) : file))} /></label>) : form.choices.slice(0, choiceCount).map((choice, index) => <label key={index}>ตัวเลือก {String.fromCharCode(65 + index)} *<input required value={choice} onChange={(event) => updateChoice(index, event.target.value)} /></label>))}
+            <label>คำตอบที่ถูก *<select required value={form.answer} onChange={(event) => update("answer", event.target.value)}><option value="">เลือกคำตอบ</option>{(isListeningTrueFalse ? ["ถูก", "ผิด"] : activeSection.format === "image-choice" ? ["A", "B", "C"] : isListeningImageMatching ? ["A", "B", "C", "D", "E"] : form.choices.slice(0, choiceCount).filter(Boolean)).map((choice) => <option key={choice} value={choice}>{choice}</option>)}</select></label>
+            <label>แนบไฟล์เสียงเข้า R2 (ถ้ามี)<input type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,.mp3,.wav,.ogg,.m4a" onChange={(event) => setAudioFile(event.target.files?.[0] ?? null)} /></label>
+            <label>แนบรูปภาพเข้า R2 (ถ้ามี)<input type="file" accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif" onChange={(event) => setImageFile(event.target.files?.[0] ?? null)} /></label>
+          </div>
+          <div className="admin-form-actions"><span>เลขข้อที่รับได้: {activeSection.from} - {activeSection.to} · แนบเสียงครั้งเดียวในข้อแรกของพาร์ตฟัง</span><button className="admin-primary-button" type="submit" disabled={saving}>{uploadingMedia ? "กำลังอัปโหลดไฟล์..." : saving ? "กำลังบันทึก..." : "บันทึกข้อสอบ"}</button></div>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div className="admin-content">

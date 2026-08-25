@@ -21,6 +21,7 @@ export type QuizItem = {
   format?: "choice" | "true-false" | "image-choice" | "matching" | "fill-blank";
   questionNumber?: number;
   mediaUrl?: string;
+  imageUrl?: string;
 };
 
 export type LessonData = {

@@ -8,6 +8,17 @@ async function getAdmin() {
   return profile.role === "admin" ? profile : null;
 }
 
+const hsk1Blueprint = [
+  { part: "listening", section: "1", from: 1, to: 5, format: "true-false" },
+  { part: "listening", section: "2", from: 6, to: 10, format: "image-choice" },
+  { part: "listening", section: "3", from: 11, to: 15, format: "matching" },
+  { part: "listening", section: "4", from: 16, to: 20, format: "choice" },
+  { part: "reading", section: "1", from: 21, to: 25, format: "true-false" },
+  { part: "reading", section: "2", from: 26, to: 30, format: "matching" },
+  { part: "reading", section: "3", from: 31, to: 35, format: "matching" },
+  { part: "reading", section: "4", from: 36, to: 40, format: "fill-blank" },
+] as const;
+
 export async function GET() {
   try {
     if (!(await getAdmin())) return Response.json({ error: "Admin access required" }, { status: 403 });
@@ -22,7 +33,7 @@ export async function POST(request: Request) {
     if (!(await getAdmin())) return Response.json({ error: "Admin access required" }, { status: 403 });
     const payload = (await request.json()) as {
       levelId?: string; documentId?: string; part?: string; section?: string; format?: string;
-      questionNumber?: number; prompt?: string; choices?: string[]; answer?: string; mediaUrl?: string;
+      questionNumber?: number; prompt?: string; choices?: string[]; answer?: string; mediaUrl?: string; imageUrl?: string;
     };
     const values = {
       levelId: payload.levelId?.trim() ?? "",
@@ -35,9 +46,22 @@ export async function POST(request: Request) {
       choices: Array.isArray(payload.choices) ? payload.choices.map((choice) => choice.trim()).filter(Boolean) : [],
       answer: payload.answer?.trim() ?? "",
       mediaUrl: payload.mediaUrl?.trim() ?? "",
+      imageUrl: payload.imageUrl?.trim() ?? "",
     };
-    if (!values.levelId || !values.documentId || !values.part || !values.section || !values.format || !values.questionNumber || !values.prompt || values.choices.length < 2 || !values.answer || !values.choices.includes(values.answer)) {
+    const isListeningTrueFalse = values.part === "listening" && values.section === "1" && values.format === "true-false";
+    const isListeningImageChoice = values.part === "listening" && values.format === "image-choice";
+    const isListeningImageMatching = values.part === "listening" && values.section === "3" && values.format === "matching";
+    if (isListeningTrueFalse) values.choices = ["ถูก", "ผิด"];
+    if (isListeningImageChoice) values.choices = ["A", "B", "C"];
+    if (isListeningImageMatching) values.choices = ["A", "B", "C", "D", "E"];
+    if (!values.levelId || !values.documentId || !values.part || !values.section || !values.format || !values.questionNumber || (!isListeningTrueFalse && !isListeningImageChoice && !isListeningImageMatching && !values.prompt) || values.choices.length < 2 || !values.answer || !values.choices.includes(values.answer)) {
       return Response.json({ error: "กรุณากรอกข้อมูลข้อสอบให้ครบ และคำตอบต้องอยู่ในตัวเลือก" }, { status: 400 });
+    }
+    if (values.levelId === "hsk1") {
+      const section = hsk1Blueprint.find((item) => item.part === values.part && item.section === values.section);
+      if (!section || values.questionNumber < section.from || values.questionNumber > section.to || values.format !== section.format) {
+        return Response.json({ error: "ข้อสอบ HSK 1 ไม่ตรงกับ Blueprint ของพาร์ต/ส่วน/เลขข้อที่เลือก" }, { status: 400 });
+      }
     }
     return Response.json({ ok: true, question: await addQuizQuestion(values) }, { status: 201 });
   } catch (error) {

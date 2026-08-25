@@ -32,7 +32,7 @@ const localBindingConfig = {
     ? [
         {
           binding: r2,
-          bucket_name: "site-creator-r2",
+          bucket_name: "hsk-audio",
         },
       ]
     : [],

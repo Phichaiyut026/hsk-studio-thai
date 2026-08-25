@@ -63,6 +63,7 @@ export async function ensureHskSeedData() {
       format: question.format ?? "choice",
       questionNumber: question.questionNumber ?? index + 1,
       mediaUrl: question.mediaUrl ?? null,
+      imageUrl: question.imageUrl ?? null,
     })),
   );
 
@@ -80,8 +81,8 @@ export async function ensureHskSeedData() {
       d1
         .prepare(
           `INSERT OR IGNORE INTO quiz_questions
-          (id, level_id, prompt, answer, choices_json, position, document_id, part, section, format, question_number, media_url)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          (id, level_id, prompt, answer, choices_json, position, document_id, part, section, format, question_number, media_url, image_url)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .bind(
           question.id,
@@ -96,16 +97,17 @@ export async function ensureHskSeedData() {
           question.format,
           question.questionNumber,
           question.mediaUrl,
+          question.imageUrl,
         ),
     ),
     ...questionRows.map((question) =>
       d1.prepare(
         `UPDATE quiz_questions
-         SET document_id = ?, part = ?, section = ?, format = ?, question_number = ?, media_url = ?
+         SET document_id = ?, part = ?, section = ?, format = ?, question_number = ?, media_url = ?, image_url = ?
          WHERE id = ?`,
       ).bind(
         question.documentId, question.part, question.section, question.format,
-        question.questionNumber, question.mediaUrl, question.id,
+        question.questionNumber, question.mediaUrl, question.imageUrl, question.id,
       ),
     ),
   ]);
@@ -174,6 +176,7 @@ async function initializeHskSchema() {
         format text NOT NULL DEFAULT 'choice',
         question_number integer NOT NULL DEFAULT 1,
         media_url text,
+        image_url text,
         created_at text DEFAULT CURRENT_TIMESTAMP NOT NULL
       )`,
     ),
@@ -223,6 +226,7 @@ async function initializeHskSchema() {
     "ALTER TABLE quiz_questions ADD COLUMN format text NOT NULL DEFAULT 'choice'",
     "ALTER TABLE quiz_questions ADD COLUMN question_number integer NOT NULL DEFAULT 1",
     "ALTER TABLE quiz_questions ADD COLUMN media_url text",
+    "ALTER TABLE quiz_questions ADD COLUMN image_url text",
   ]) {
     try { await d1.prepare(statement).run(); } catch { /* Existing databases may already have this column. */ }
   }
@@ -503,11 +507,11 @@ export async function getSystemOverview(): Promise<SystemOverview> {
 export async function listQuizQuestions() {
   await ensureHskSchema();
   const result = await env.DB.prepare(
-    `SELECT id, level_id, prompt, answer, choices_json, position, document_id, part, section, format, question_number, media_url, created_at
+    `SELECT id, level_id, prompt, answer, choices_json, position, document_id, part, section, format, question_number, media_url, image_url, created_at
      FROM quiz_questions ORDER BY level_id, document_id, part, section, question_number, position`,
   ).all<{
     id: string; level_id: string; prompt: string; answer: string; choices_json: string; position: number;
-    document_id: string; part: string; section: string; format: string; question_number: number; media_url: string | null; created_at: string;
+    document_id: string; part: string; section: string; format: string; question_number: number; media_url: string | null; image_url: string | null; created_at: string;
   }>();
 
   return result.results.map((question) => ({
@@ -523,6 +527,7 @@ export async function listQuizQuestions() {
     format: question.format,
     questionNumber: question.question_number,
     mediaUrl: question.media_url ?? "",
+    imageUrl: question.image_url ?? "",
     createdAt: question.created_at,
   }));
 }
@@ -538,6 +543,7 @@ export async function addQuizQuestion(input: {
   choices: string[];
   answer: string;
   mediaUrl?: string;
+  imageUrl?: string;
 }) {
   await ensureHskSchema();
   const positionRow = await env.DB.prepare(
@@ -546,12 +552,12 @@ export async function addQuizQuestion(input: {
   const id = `admin-quiz-${input.levelId}-${crypto.randomUUID()}`;
   await env.DB.prepare(
     `INSERT INTO quiz_questions
-      (id, level_id, prompt, answer, choices_json, position, document_id, part, section, format, question_number, media_url)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (id, level_id, prompt, answer, choices_json, position, document_id, part, section, format, question_number, media_url, image_url)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).bind(
     id, input.levelId, input.prompt, input.answer, JSON.stringify(input.choices),
     Number(positionRow?.next_position ?? 0), input.documentId, input.part, input.section,
-    input.format, input.questionNumber, input.mediaUrl?.trim() || null,
+    input.format, input.questionNumber, input.mediaUrl?.trim() || null, input.imageUrl?.trim() || null,
   ).run();
   return { id };
 }
@@ -676,6 +682,7 @@ export async function getStudyData(sessionId: string) {
           format: question.format as "choice" | "true-false" | "image-choice" | "matching" | "fill-blank",
           questionNumber: question.questionNumber,
           mediaUrl: question.mediaUrl ?? undefined,
+          imageUrl: question.imageUrl ?? undefined,
         }))
       : level.quizzes ?? [level.quiz];
 

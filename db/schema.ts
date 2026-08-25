@@ -49,6 +49,7 @@ export const quizQuestions = sqliteTable(
     format: text("format").notNull().default("choice"),
     questionNumber: integer("question_number").notNull().default(1),
     mediaUrl: text("media_url"),
+    imageUrl: text("image_url"),
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   },
   (table) => [index("idx_quiz_questions_level_position").on(table.levelId, table.position)],
