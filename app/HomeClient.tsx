@@ -20,15 +20,16 @@ type Props = {
 
 export default function HomeClient({ authPaths, user, isAdmin }: Props) {
   const [levels, setLevels] = useState<Level[]>(hskLevels);
-  const [checkedTasks] = useState<string[]>(() => {
-    if (typeof window === "undefined") return [];
+  const [checkedTasks, setCheckedTasks] = useState<string[]>([]);
+
+  useEffect(() => {
     try {
       const savedTasks = window.localStorage.getItem("hsk-daily-checked-tasks");
-      return savedTasks ? JSON.parse(savedTasks) : [];
+      if (savedTasks) setCheckedTasks(JSON.parse(savedTasks));
     } catch {
-      return [];
+      // Ignore unavailable or malformed local progress.
     }
-  });
+  }, []);
 
   useEffect(() => {
     let ignore = false;
@@ -39,6 +40,24 @@ export default function HomeClient({ authPaths, user, isAdmin }: Props) {
       })
       .catch(() => undefined);
     return () => { ignore = true; };
+  }, []);
+
+  useEffect(() => {
+    const elements = document.querySelectorAll<HTMLElement>(".scroll-reveal");
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.16 },
+    );
+
+    elements.forEach((element) => observer.observe(element));
+    return () => observer.disconnect();
   }, []);
 
   // Daily word randomly picked or fixed based on date
@@ -134,6 +153,25 @@ export default function HomeClient({ authPaths, user, isAdmin }: Props) {
                 </span>
               </div>
             </div>
+          </div>
+        </section>
+
+        <section className="teacher-section scroll-reveal" aria-labelledby="teacher-heading">
+          <div className="teacher-photo-wrap">
+            <img
+              className="teacher-photo"
+              src="/img/teacher.jpg"
+              alt="ครูผู้สอนภาษาจีน"
+            />
+          </div>
+          <div className="teacher-copy">
+            <span className="teacher-eyebrow">ครูผู้สอนของ HSK Studio</span>
+            <h2 id="teacher-heading">เรียนภาษาจีนกับครูผู้สอนที่พร้อมดูแลคุณ</h2>
+            <p>
+              พื้นที่แนะนำตัวและประสบการณ์ของครูผู้สอนจะเพิ่มเติมในส่วนนี้
+              เพื่อให้คุณรู้จักผู้สอนก่อนเริ่มเรียน
+            </p>
+            <span className="teacher-placeholder">รายละเอียดเพิ่มเติมเร็ว ๆ นี้</span>
           </div>
         </section>
 

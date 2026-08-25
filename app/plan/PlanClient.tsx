@@ -18,25 +18,19 @@ type Props = {
 };
 
 export default function PlanClient({ authPaths, user, isAdmin }: Props) {
-  const [tasks, setTasks] = useState<string[]>(() => {
-    if (typeof window === "undefined") return defaultTasks;
+  const [tasks, setTasks] = useState<string[]>(defaultTasks);
+  const [checkedTasks, setCheckedTasks] = useState<string[]>([]);
+
+  useEffect(() => {
     try {
       const savedTasks = window.localStorage.getItem("hsk-custom-tasks");
-      return savedTasks ? JSON.parse(savedTasks) : defaultTasks;
-    } catch {
-      return defaultTasks;
-    }
-  });
-
-  const [checkedTasks, setCheckedTasks] = useState<string[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
       const savedChecked = window.localStorage.getItem("hsk-daily-checked-tasks");
-      return savedChecked ? JSON.parse(savedChecked) : [];
+      if (savedTasks) setTasks(JSON.parse(savedTasks));
+      if (savedChecked) setCheckedTasks(JSON.parse(savedChecked));
     } catch {
-      return [];
+      // Ignore unavailable or malformed local progress.
     }
-  });
+  }, []);
 
   const [newTaskInput, setNewTaskInput] = useState("");
 

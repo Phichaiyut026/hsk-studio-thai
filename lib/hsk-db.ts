@@ -135,6 +135,7 @@ async function initializeHskSchema() {
         display_name text NOT NULL,
         password_hash text,
         role text DEFAULT 'user' NOT NULL CHECK (role IN ('user', 'admin')),
+        disabled_at text,
         created_at text DEFAULT CURRENT_TIMESTAMP NOT NULL,
         updated_at text DEFAULT CURRENT_TIMESTAMP NOT NULL
       )`,
@@ -195,6 +196,12 @@ async function initializeHskSchema() {
 
   try {
     await d1.prepare("ALTER TABLE users ADD COLUMN password_hash text").run();
+  } catch {
+    // Existing databases may already have this column.
+  }
+
+  try {
+    await d1.prepare("ALTER TABLE users ADD COLUMN disabled_at text").run();
   } catch {
     // Existing databases may already have this column.
   }
@@ -263,11 +270,15 @@ export async function ensureUserProfile(input: {
   }
 
   const profile = await d1.prepare(
-    "SELECT user_id, email, display_name, role FROM users WHERE user_id = ? LIMIT 1",
-  ).bind(input.userId).first<{ user_id: string; email: string; display_name: string; role: AppRole }>();
+    "SELECT user_id, email, display_name, role, disabled_at FROM users WHERE user_id = ? LIMIT 1",
+  ).bind(input.userId).first<{ user_id: string; email: string; display_name: string; role: AppRole; disabled_at: string | null }>();
 
   if (!profile || (profile.role !== "user" && profile.role !== "admin")) {
     throw new Error("User profile could not be loaded");
+  }
+
+  if (profile.disabled_at) {
+    throw new Error("บัญชีผู้ใช้นี้ถูกปิดใช้งาน");
   }
 
   return {
@@ -307,9 +318,10 @@ export async function authenticateUser(identifierInput: string, password: string
   const d1 = env.DB;
   const identifier = identifierInput.trim().toLowerCase();
   const row = await d1.prepare(
-    "SELECT user_id, email, display_name, role, password_hash FROM users WHERE lower(display_name) = ? OR lower(email) = ? LIMIT 1",
-  ).bind(identifier, identifier).first<{ user_id: string; email: string; display_name: string; role: AppRole; password_hash: string | null }>();
+    "SELECT user_id, email, display_name, role, password_hash, disabled_at FROM users WHERE lower(display_name) = ? OR lower(email) = ? LIMIT 1",
+  ).bind(identifier, identifier).first<{ user_id: string; email: string; display_name: string; role: AppRole; password_hash: string | null; disabled_at: string | null }>();
   if (!row) return null;
+  if (row.disabled_at) return null;
 
   if (row.password_hash) {
     if (!(await verifyPassword(password, row.password_hash))) return null;
@@ -326,8 +338,43 @@ export async function listUsers() {
     email: users.email,
     displayName: users.displayName,
     role: users.role,
+    disabledAt: users.disabledAt,
     createdAt: users.createdAt,
   }).from(users).orderBy(users.createdAt);
+}
+
+export async function updateUserAccount(input: {
+  userId: string;
+  displayName: string;
+  email: string;
+  password?: string;
+  role: AppRole;
+}) {
+  await ensureHskSchema();
+  const d1 = env.DB;
+  const passwordHash = input.password ? await hashPassword(input.password) : null;
+  const statement = input.password
+    ? "UPDATE users SET display_name = ?, email = ?, password_hash = ?, role = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?"
+    : "UPDATE users SET display_name = ?, email = ?, role = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?";
+  const result = input.password
+    ? await d1.prepare(statement).bind(input.displayName.trim(), input.email.trim().toLowerCase(), passwordHash, input.role, input.userId).run()
+    : await d1.prepare(statement).bind(input.displayName.trim(), input.email.trim().toLowerCase(), input.role, input.userId).run();
+  if (!result.success || !result.meta.changes) throw new Error("ไม่พบผู้ใช้ที่ต้องการแก้ไข");
+}
+
+export async function setUserDisabled(userId: string, disabled: boolean) {
+  await ensureHskSchema();
+  const result = await env.DB.prepare(
+    "UPDATE users SET disabled_at = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?",
+  ).bind(disabled ? new Date().toISOString() : null, userId).run();
+  if (!result.success || !result.meta.changes) throw new Error("ไม่พบผู้ใช้ที่ต้องการเปลี่ยนสถานะ");
+}
+
+export async function deleteUser(userId: string) {
+  await ensureHskSchema();
+  await env.DB.prepare("DELETE FROM quiz_attempts WHERE user_id = ?").bind(userId).run();
+  const result = await env.DB.prepare("DELETE FROM users WHERE user_id = ?").bind(userId).run();
+  if (!result.success || !result.meta.changes) throw new Error("ไม่พบผู้ใช้ที่ต้องการลบ");
 }
 
 export async function addVocabularyWord(input: {

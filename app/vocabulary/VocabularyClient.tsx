@@ -27,15 +27,16 @@ export default function VocabularyClient({ authPaths, user, isAdmin }: Props) {
   const [flipped, setFlipped] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [masteredWords, setMasteredWords] = useState<string[]>(() => {
-    if (typeof window === "undefined") return [];
+  const [masteredWords, setMasteredWords] = useState<string[]>([]);
+
+  useEffect(() => {
     try {
       const saved = window.localStorage.getItem("hsk-mastered-words");
-      return saved ? JSON.parse(saved) : [];
+      if (saved) setMasteredWords(JSON.parse(saved));
     } catch {
-      return [];
+      // Ignore unavailable or malformed local progress.
     }
-  });
+  }, []);
 
   useEffect(() => {
     let ignore = false;
@@ -46,6 +47,27 @@ export default function VocabularyClient({ authPaths, user, isAdmin }: Props) {
       })
       .catch(() => undefined);
     return () => { ignore = true; };
+  }, []);
+
+  useEffect(() => {
+    const page = document.querySelector<HTMLElement>(".vocabulary-page");
+    if (!page) return;
+
+    let frame = 0;
+    function handlePointerMove(event: PointerEvent) {
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        page.style.setProperty("--cursor-x", `${event.clientX}px`);
+        page.style.setProperty("--cursor-y", `${event.clientY}px`);
+        frame = 0;
+      });
+    }
+
+    window.addEventListener("pointermove", handlePointerMove, { passive: true });
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
   }, []);
 
   const currentLevel = useMemo(() => {
@@ -134,7 +156,7 @@ export default function VocabularyClient({ authPaths, user, isAdmin }: Props) {
   });
 
   return (
-    <div className="app-page min-h-screen text-[var(--ink)] flex flex-col justify-between">
+    <div className="app-page vocabulary-page min-h-screen text-[var(--ink)] flex flex-col justify-between">
       <div>
         <Navbar authPaths={authPaths} user={user} isAdmin={isAdmin} />
 
@@ -195,6 +217,13 @@ export default function VocabularyClient({ authPaths, user, isAdmin }: Props) {
 
           {/* Controls Bar: Mode toggle & Search */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-4 rounded-2xl bg-[var(--paper)] border border-[var(--line)] mb-8 shadow-xs">
+            <a
+              href={`/vocabulary/game?level=${encodeURIComponent(selectedLevelId)}`}
+              className="vocabulary-game-launch"
+            >
+              <span aria-hidden="true">▶</span>
+              <span>เริ่มเกมทบทวน</span>
+            </a>
             {/* View Mode Toggle */}
             <div className="flex items-center p-1 bg-black/5 rounded-xl self-start sm:self-auto">
               <button

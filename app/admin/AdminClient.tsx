@@ -8,6 +8,7 @@ type AdminUser = {
   email: string;
   displayName: string;
   role: "user" | "admin";
+  disabledAt: string | null;
   createdAt: string;
 };
 
@@ -60,6 +61,7 @@ export default function AdminClient({
   const [query, setQuery] = useState("");
   const [vocabularyQuery, setVocabularyQuery] = useState("");
   const [vocabularyLevel, setVocabularyLevel] = useState("all");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   async function loadUsers() {
     const response = await fetch("/api/admin/users");
@@ -159,24 +161,34 @@ export default function AdminClient({
 
   return (
     <div className="admin-shell">
-      <aside className="admin-sidebar">
-        <a href="/" className="admin-sidebar-brand"><span className="admin-logo">汉</span><span><strong>HSK Studio</strong><small>Admin Console</small></span></a>
+      <aside className={`admin-sidebar ${sidebarCollapsed ? "is-collapsed" : ""}`}>
+        <a href="/" className="admin-sidebar-brand" title="กลับหน้าเว็บไซต์"><span className="admin-logo">汉</span><span className="admin-sidebar-brand-copy"><strong>HSK Studio</strong><small>Admin Console</small></span></a>
+        <button
+          type="button"
+          className="admin-sidebar-toggle"
+          onClick={() => setSidebarCollapsed((current) => !current)}
+          aria-label={sidebarCollapsed ? "ขยายเมนู" : "ย่อเมนู"}
+          title={sidebarCollapsed ? "ขยายเมนู" : "ย่อเมนู"}
+        >
+          <span aria-hidden="true">{sidebarCollapsed ? "›" : "‹"}</span>
+          <span className="admin-sidebar-toggle-text">{sidebarCollapsed ? "ขยายเมนู" : "ย่อเมนู"}</span>
+        </button>
         <div className="admin-sidebar-section">
           <span className="admin-sidebar-label">ระบบจัดการ</span>
-          <button type="button" className={`admin-sidebar-link ${activeTab === "overview" ? "active" : ""}`} onClick={() => setActiveTab("overview")}><span className="admin-sidebar-icon">O</span>ภาพรวม Dashboard</button>
-          <button type="button" className={`admin-sidebar-link ${activeTab === "users" ? "active" : ""}`} onClick={() => setActiveTab("users")}><span className="admin-sidebar-icon">U</span>ผู้ใช้และสิทธิ์</button>
-          <button type="button" className={`admin-sidebar-link ${activeTab === "vocabulary" ? "active" : ""}`} onClick={() => setActiveTab("vocabulary")}><span className="admin-sidebar-icon">V</span>เพิ่มคำศัพท์</button>
-          <button type="button" className={`admin-sidebar-link ${activeTab === "vocabulary-list" ? "active" : ""}`} onClick={() => setActiveTab("vocabulary-list")}><span className="admin-sidebar-icon">L</span>รายการคำศัพท์</button>
-          <button type="button" className={`admin-sidebar-link ${activeTab === "exams" ? "active" : ""}`} onClick={() => setActiveTab("exams")}><span className="admin-sidebar-icon">E</span>ระบบสอบ HSK</button>
+          <button type="button" title="ภาพรวม Dashboard" className={`admin-sidebar-link ${activeTab === "overview" ? "active" : ""}`} onClick={() => setActiveTab("overview")}><span className="admin-sidebar-icon">O</span><span className="admin-sidebar-link-text">ภาพรวม Dashboard</span></button>
+          <button type="button" title="ผู้ใช้และสิทธิ์" className={`admin-sidebar-link ${activeTab === "users" ? "active" : ""}`} onClick={() => setActiveTab("users")}><span className="admin-sidebar-icon">U</span><span className="admin-sidebar-link-text">ผู้ใช้และสิทธิ์</span></button>
+          <button type="button" title="เพิ่มคำศัพท์" className={`admin-sidebar-link ${activeTab === "vocabulary" ? "active" : ""}`} onClick={() => setActiveTab("vocabulary")}><span className="admin-sidebar-icon">V</span><span className="admin-sidebar-link-text">เพิ่มคำศัพท์</span></button>
+          <button type="button" title="รายการคำศัพท์" className={`admin-sidebar-link ${activeTab === "vocabulary-list" ? "active" : ""}`} onClick={() => setActiveTab("vocabulary-list")}><span className="admin-sidebar-icon">L</span><span className="admin-sidebar-link-text">รายการคำศัพท์</span></button>
+          <button type="button" title="ระบบสอบ HSK" className={`admin-sidebar-link ${activeTab === "exams" ? "active" : ""}`} onClick={() => setActiveTab("exams")}><span className="admin-sidebar-icon">E</span><span className="admin-sidebar-link-text">ระบบสอบ HSK</span></button>
         </div>
         <div className="admin-sidebar-section">
           <span className="admin-sidebar-label">ทางลัด</span>
-          <a className="admin-sidebar-link" href="/" target="_blank" rel="noreferrer"><span className="admin-sidebar-icon">W</span>เปิดหน้าเว็บไซต์</a>
-          <a className="admin-sidebar-link" href="/vocabulary" target="_blank" rel="noreferrer"><span className="admin-sidebar-icon">V</span>คลังคำศัพท์</a>
+          <a className="admin-sidebar-link" href="/" target="_blank" rel="noreferrer" title="เปิดหน้าเว็บไซต์"><span className="admin-sidebar-icon">W</span><span className="admin-sidebar-link-text">เปิดหน้าเว็บไซต์</span></a>
+          <a className="admin-sidebar-link" href="/vocabulary" target="_blank" rel="noreferrer" title="คลังคำศัพท์"><span className="admin-sidebar-icon">V</span><span className="admin-sidebar-link-text">คลังคำศัพท์</span></a>
         </div>
         <div className="admin-sidebar-footer">
-          <div className="admin-profile"><span className="admin-avatar">{user.displayName.slice(0, 1).toUpperCase()}</span><span><strong>{user.displayName}</strong><small>{user.email}</small></span></div>
-          <a href={authPaths.signOut} className="admin-logout">ออกจากระบบ</a>
+          <div className="admin-profile"><span className="admin-avatar">{user.displayName.slice(0, 1).toUpperCase()}</span><span className="admin-profile-copy"><strong>{user.displayName}</strong><small>{user.email}</small></span></div>
+          <a href={authPaths.signOut} className="admin-logout" title="ออกจากระบบ"><span aria-hidden="true">↪</span><span className="admin-sidebar-link-text">ออกจากระบบ</span></a>
         </div>
       </aside>
 
@@ -288,7 +300,7 @@ function VocabularyListPanel({ vocabulary, query, setQuery, level, setLevel, set
       <section className="admin-page-intro"><div><span className="admin-eyebrow">คลังเนื้อหา</span><h2>คำศัพท์ทั้งหมด</h2><p>แก้ไขหรือลบคำศัพท์จากฐานข้อมูลได้โดยตรง</p></div><span className="admin-content-count">พบ {vocabulary.length.toLocaleString("th-TH")} รายการ</span></section>
       <section className="admin-card admin-vocabulary-list-card">
         <div className="admin-list-toolbar"><label className="admin-search"><span>ค้นหาคำศัพท์</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหาคำจีน พินอิน หรือคำแปล" /></label><label className="admin-level-filter"><span>ระดับ</span><select value={level} onChange={(event) => setLevel(event.target.value)}><option value="all">ทุกระดับ</option>{[1, 2, 3, 4, 5, 6].map((item) => <option key={item} value={`hsk${item}`}>HSK {item}</option>)}</select></label></div>
-        <div className="admin-table-scroll"><table className="admin-vocabulary-table"><thead><tr><th>ระดับ</th><th>คำจีน</th><th>พินอิน</th><th>คำแปล</th><th>ตัวอย่างประโยค</th><th>จัดการ</th></tr></thead><tbody>{visibleVocabulary.map((word) => { const isEditing = editingId === word.id && draft; return <tr key={word.id}>{isEditing ? <><td><select value={draft.levelId} onChange={(event) => updateDraft("levelId", event.target.value)}>{[1, 2, 3, 4, 5, 6].map((item) => <option key={item} value={`hsk${item}`}>HSK {item}</option>)}</select></td><td><input value={draft.hanzi} onChange={(event) => updateDraft("hanzi", event.target.value)} /></td><td><input value={draft.pinyin} onChange={(event) => updateDraft("pinyin", event.target.value)} /></td><td><input value={draft.thai} onChange={(event) => updateDraft("thai", event.target.value)} /></td><td><textarea value={draft.example} onChange={(event) => updateDraft("example", event.target.value)} rows={2} /></td><td><div className="admin-row-actions"><button type="button" onClick={() => void saveDraft()} disabled={saving}>บันทึก</button><button type="button" onClick={cancelEditing}>ยกเลิก</button></div></td></> : <><td><span className="admin-level-badge">{word.levelId.toUpperCase()}</span></td><td><strong className="admin-table-hanzi">{word.hanzi}</strong></td><td>{word.pinyin}</td><td>{word.thai}</td><td className="admin-example-cell">{word.example}</td><td><div className="admin-row-actions"><button type="button" onClick={() => startEditing(word)}>แก้ไข</button><button type="button" className="danger" onClick={() => void removeWord(word.id)}>ลบ</button></div></td></>}</tr>; })}</tbody></table>{!vocabulary.length && <p className="admin-empty">ยังไม่มีคำศัพท์ที่ตรงกับเงื่อนไข</p>}</div>
+        <div className="admin-table-scroll"><table className="admin-vocabulary-table"><thead><tr><th>ระดับ</th><th>คำจีน</th><th>พินอิน</th><th>คำแปล</th><th>ตัวอย่างประโยค</th><th>จัดการ</th></tr></thead><tbody>{visibleVocabulary.map((word) => { const isEditing = editingId === word.id && draft; return <tr key={word.id}>{isEditing ? <><td><select value={draft.levelId} onChange={(event) => updateDraft("levelId", event.target.value)}>{[1, 2, 3, 4, 5, 6].map((item) => <option key={item} value={`hsk${item}`}>HSK {item}</option>)}</select></td><td><input value={draft.hanzi} onChange={(event) => updateDraft("hanzi", event.target.value)} /></td><td><input value={draft.pinyin} onChange={(event) => updateDraft("pinyin", event.target.value)} /></td><td><input value={draft.thai} onChange={(event) => updateDraft("thai", event.target.value)} /></td><td><textarea value={draft.example} onChange={(event) => updateDraft("example", event.target.value)} rows={2} /></td><td><div className="admin-row-actions"><button type="button" onClick={() => void saveDraft()} disabled={saving}>บันทึก</button><button type="button" onClick={cancelEditing}>ยกเลิก</button></div></td></> : <><td><span className={`admin-level-badge ${word.levelId.toLowerCase()}`}>{word.levelId.toUpperCase()}</span></td><td><strong className="admin-table-hanzi">{word.hanzi}</strong></td><td>{word.pinyin}</td><td>{word.thai}</td><td className="admin-example-cell">{word.example}</td><td><div className="admin-row-actions"><button type="button" onClick={() => startEditing(word)}>แก้ไข</button><button type="button" className="danger" onClick={() => void removeWord(word.id)}>ลบ</button></div></td></>}</tr>; })}</tbody></table>{!vocabulary.length && <p className="admin-empty">ยังไม่มีคำศัพท์ที่ตรงกับเงื่อนไข</p>}</div>
         <div className="admin-table-meta"><span>แสดง {visibleVocabulary.length} จาก {vocabulary.length.toLocaleString("th-TH")} รายการ</span><div className="admin-row-actions"><button type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page === 1}>ก่อนหน้า</button><span>หน้า {page} / {totalPages}</span><button type="button" onClick={() => setPage((current) => Math.min(totalPages, current + 1))} disabled={page === totalPages}>ถัดไป</button></div></div>
       </section>
     </div>
@@ -351,6 +363,8 @@ function OverviewPanel({ overview, busy, seedHskData, syncHuggingFaceData, setAc
 function UsersPanel({ users, query, setQuery, currentUserEmail, changeRole, onCreated, setMessage }: { users: AdminUser[]; query: string; setQuery: (value: string) => void; currentUserEmail: string; changeRole: (userId: string, role: "user" | "admin") => Promise<void>; onCreated: () => Promise<void>; setMessage: (message: string) => void }) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ displayName: "", email: "", password: "", role: "user" as "user" | "admin" });
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ displayName: "", email: "", password: "", role: "user" as "user" | "admin" });
   const [saving, setSaving] = useState(false);
 
   async function createUser(event: FormEvent<HTMLFormElement>) {
@@ -363,7 +377,38 @@ function UsersPanel({ users, query, setQuery, currentUserEmail, changeRole, onCr
     setSaving(false);
   }
 
-  return <div className="admin-content"><section className="admin-page-intro"><div><span className="admin-eyebrow">สิทธิ์การเข้าถึง</span><h2>จัดการผู้ใช้</h2><p>กำหนดว่าใครสามารถเข้าถึงเครื่องมือจัดการระบบได้</p></div><div className="admin-user-toolbar"><label className="admin-search"><span>ค้นหา</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ชื่อ อีเมล หรือ User ID" /></label><button type="button" className="admin-primary-button" onClick={() => setShowForm((current) => !current)}>{showForm ? "ปิดฟอร์ม" : "เพิ่มผู้ใช้"}</button></div></section>{showForm && <form className="admin-card admin-user-form" onSubmit={createUser}><label>ชื่อผู้ใช้<input required value={form.displayName} onChange={(event) => setForm({ ...form, displayName: event.target.value })} /></label><label>อีเมล<input required type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} /></label><label>รหัสผ่าน<input required minLength={6} type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} /></label><label>สิทธิ์<select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value as "user" | "admin" })}><option value="user">User</option><option value="admin">Admin</option></select></label><button className="admin-primary-button" type="submit" disabled={saving}>{saving ? "กำลังสร้าง..." : "สร้างบัญชี"}</button></form>}<section className="admin-card admin-table-card"><div className="admin-table-meta"><strong>{users.length} บัญชี</strong><span>Admin ตรวจสิทธิ์ที่ฝั่งเซิร์ฟเวอร์ทุกครั้ง</span></div><div className="admin-table-scroll"><table className="admin-users-table"><thead><tr><th>ผู้ใช้</th><th>อีเมล</th><th>สิทธิ์</th><th>สร้างเมื่อ</th></tr></thead><tbody>{users.map((item) => <tr key={item.userId}><td><strong>{item.displayName}</strong><small>{item.userId}</small></td><td>{item.email}</td><td><select value={item.role} onChange={(event) => void changeRole(item.userId, event.target.value as "user" | "admin")} disabled={item.email === currentUserEmail}><option value="user">User</option><option value="admin">Admin</option></select></td><td>{new Date(item.createdAt).toLocaleDateString("th-TH")}</td></tr>)}</tbody></table>{!users.length && <p className="admin-empty">ไม่พบผู้ใช้ที่ค้นหา</p>}</div></section></div>;
+  function startEditing(user: AdminUser) {
+    setEditingUserId(user.userId);
+    setEditForm({ displayName: user.displayName, email: user.email, password: "", role: user.role });
+  }
+
+  async function saveUser(userId: string) {
+    setSaving(true);
+    const response = await fetch("/api/admin/users", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "update", userId, ...editForm }) });
+    const data = (await response.json().catch(() => ({}))) as { error?: string };
+    setMessage(response.ok ? "แก้ไขข้อมูลผู้ใช้เรียบร้อย" : data.error ?? "แก้ไขข้อมูลไม่สำเร็จ");
+    if (response.ok) { setEditingUserId(null); await onCreated(); }
+    setSaving(false);
+  }
+
+  async function toggleDisabled(user: AdminUser) {
+    const action = user.disabledAt ? "เปิดใช้งาน" : "ปิดใช้งาน";
+    if (!window.confirm(`${action}บัญชี ${user.displayName} หรือไม่?`)) return;
+    const response = await fetch("/api/admin/users", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "status", userId: user.userId, disabled: !user.disabledAt }) });
+    const data = (await response.json().catch(() => ({}))) as { error?: string };
+    setMessage(response.ok ? `${action}บัญชีเรียบร้อย` : data.error ?? `${action}บัญชีไม่สำเร็จ`);
+    if (response.ok) await onCreated();
+  }
+
+  async function removeUser(user: AdminUser) {
+    if (!window.confirm(`ลบบัญชี ${user.displayName} อย่างถาวรหรือไม่?`)) return;
+    const response = await fetch("/api/admin/users", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: user.userId }) });
+    const data = (await response.json().catch(() => ({}))) as { error?: string };
+    setMessage(response.ok ? "ลบบัญชีเรียบร้อย" : data.error ?? "ลบบัญชีไม่สำเร็จ");
+    if (response.ok) await onCreated();
+  }
+
+  return <div className="admin-content"><section className="admin-page-intro"><div><span className="admin-eyebrow">สิทธิ์การเข้าถึง</span><h2>จัดการผู้ใช้</h2><p>กำหนดว่าใครสามารถเข้าถึงเครื่องมือจัดการระบบได้</p></div><div className="admin-user-toolbar"><label className="admin-search"><span>ค้นหา</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ชื่อ อีเมล หรือ User ID" /></label><button type="button" className="admin-primary-button" onClick={() => setShowForm((current) => !current)}>{showForm ? "ปิดฟอร์ม" : "เพิ่มผู้ใช้"}</button></div></section>{showForm && <form className="admin-card admin-user-form" onSubmit={createUser}><label>ชื่อผู้ใช้<input required value={form.displayName} onChange={(event) => setForm({ ...form, displayName: event.target.value })} /></label><label>อีเมล<input required type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} /></label><label>รหัสผ่าน<input required minLength={6} type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} /></label><label>สิทธิ์<select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value as "user" | "admin" })}><option value="user">User</option><option value="admin">Admin</option></select></label><button className="admin-primary-button" type="submit" disabled={saving}>{saving ? "กำลังสร้าง..." : "สร้างบัญชี"}</button></form>}<section className="admin-card admin-table-card"><div className="admin-table-meta"><strong>{users.length} บัญชี</strong><span>Admin ตรวจสิทธิ์ที่ฝั่งเซิร์ฟเวอร์ทุกครั้ง</span></div><div className="admin-table-scroll"><table className="admin-users-table"><thead><tr><th>ผู้ใช้</th><th>อีเมล</th><th>สิทธิ์</th><th>สถานะ</th><th>สร้างเมื่อ</th><th>จัดการ</th></tr></thead><tbody>{users.map((item) => editingUserId === item.userId ? <tr key={item.userId} className="admin-user-edit-row"><td><input value={editForm.displayName} onChange={(event) => setEditForm({ ...editForm, displayName: event.target.value })} /></td><td><input type="email" value={editForm.email} onChange={(event) => setEditForm({ ...editForm, email: event.target.value })} /><input type="password" placeholder="รหัสผ่านใหม่ (ถ้ามี)" value={editForm.password} onChange={(event) => setEditForm({ ...editForm, password: event.target.value })} /></td><td><select value={editForm.role} onChange={(event) => setEditForm({ ...editForm, role: event.target.value as "user" | "admin" })} disabled={item.email === currentUserEmail}><option value="user">User</option><option value="admin">Admin</option></select></td><td>{item.disabledAt ? "ปิดใช้งาน" : "ใช้งานอยู่"}</td><td>{new Date(item.createdAt).toLocaleDateString("th-TH")}</td><td><div className="admin-row-actions"><button type="button" onClick={() => void saveUser(item.userId)} disabled={saving}>บันทึก</button><button type="button" onClick={() => setEditingUserId(null)}>ยกเลิก</button></div></td></tr> : <tr key={item.userId} className={item.disabledAt ? "is-disabled" : ""}><td><strong>{item.displayName}</strong><small>{item.userId}</small></td><td>{item.email}</td><td><select value={item.role} onChange={(event) => void changeRole(item.userId, event.target.value as "user" | "admin")} disabled={item.email === currentUserEmail || Boolean(item.disabledAt)}><option value="user">User</option><option value="admin">Admin</option></select></td><td><span className={`admin-user-status ${item.disabledAt ? "disabled" : "active"}`}>{item.disabledAt ? "ปิดใช้งาน" : "ใช้งานอยู่"}</span></td><td>{new Date(item.createdAt).toLocaleDateString("th-TH")}</td><td><div className="admin-row-actions"><button type="button" onClick={() => startEditing(item)}>แก้ไข</button><button type="button" onClick={() => void toggleDisabled(item)} disabled={item.email === currentUserEmail}>{item.disabledAt ? "เปิดใช้งาน" : "ปิดใช้งาน"}</button><button type="button" className="danger" onClick={() => void removeUser(item)} disabled={item.email === currentUserEmail}>ลบ</button></div></td></tr>)}</tbody></table>{!users.length && <p className="admin-empty">ไม่พบผู้ใช้ที่ค้นหา</p>}</div></section></div>;
 }
 
 function Metric({ label, value, hint, tone }: { label: string; value: number; hint: string; tone: string }) {

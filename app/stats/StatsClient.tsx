@@ -61,25 +61,19 @@ export default function StatsClient({ authPaths, user, isAdmin }: Props) {
   const [quizStats, setQuizStats] = useState<QuizStats | null>(null);
   const [progress, setProgress] = useState<ProgressStats | null>(null);
 
-  const [masteredWords] = useState<string[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const saved = window.localStorage.getItem("hsk-mastered-words");
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [masteredWords, setMasteredWords] = useState<string[]>([]);
+  const [checkedTasks, setCheckedTasks] = useState<string[]>([]);
 
-  const [checkedTasks] = useState<string[]>(() => {
-    if (typeof window === "undefined") return [];
+  useEffect(() => {
     try {
-      const saved = window.localStorage.getItem("hsk-daily-checked-tasks");
-      return saved ? JSON.parse(saved) : [];
+      const savedWords = window.localStorage.getItem("hsk-mastered-words");
+      const savedTasks = window.localStorage.getItem("hsk-daily-checked-tasks");
+      if (savedWords) setMasteredWords(JSON.parse(savedWords));
+      if (savedTasks) setCheckedTasks(JSON.parse(savedTasks));
     } catch {
-      return [];
+      // Ignore unavailable or malformed local progress.
     }
-  });
+  }, []);
 
   useEffect(() => {
     let ignore = false;
