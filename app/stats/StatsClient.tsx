@@ -121,7 +121,7 @@ export default function StatsClient({ authPaths, user, isAdmin }: Props) {
     .sort((a, b) => a.accuracyPercent - b.accuracyPercent)[0];
 
   return (
-    <div className="min-h-screen bg-[var(--page)] text-[var(--ink)] flex flex-col justify-between">
+    <div className="app-page min-h-screen text-[var(--ink)] flex flex-col justify-between">
       <div>
         <Navbar authPaths={authPaths} user={user} isAdmin={isAdmin} />
 

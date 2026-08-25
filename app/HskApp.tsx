@@ -130,7 +130,7 @@ export default function HskApp({ authPaths, user }: HskAppProps) {
   }
 
   return (
-    <main className="min-h-screen bg-[var(--page)] text-[var(--ink)]">
+    <main className="app-page min-h-screen text-[var(--ink)]">
       <section className="hero">
         <nav className="topbar" aria-label="เมนูหลัก">
           <div className="brand">

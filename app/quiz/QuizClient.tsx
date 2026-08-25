@@ -238,7 +238,7 @@ export default function QuizClient({ authPaths, user, isAdmin }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--page)] text-[var(--ink)] flex flex-col justify-between">
+    <div className="app-page min-h-screen text-[var(--ink)] flex flex-col justify-between">
       <div>
         <Navbar authPaths={authPaths} user={user} isAdmin={isAdmin} />
 
