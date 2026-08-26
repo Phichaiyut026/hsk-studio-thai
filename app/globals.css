@@ -82,10 +82,10 @@ a {
   border-top: 1px solid rgba(255, 255, 255, 0.72);
   border-bottom: 1px solid rgba(255, 255, 255, 0.48);
   border-radius: 18px;
-  background: rgba(255, 253, 248, 0.34);
+  background: rgba(255, 253, 248, 0.58);
   box-shadow: 0 14px 36px rgba(31, 36, 40, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.58), inset 0 -1px 0 rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(26px) saturate(175%);
-  -webkit-backdrop-filter: blur(26px) saturate(175%);
+  backdrop-filter: blur(36px) saturate(165%);
+  -webkit-backdrop-filter: blur(36px) saturate(165%);
 }
 
 .site-navbar-inner {
@@ -328,13 +328,66 @@ a {
 }
 
 .app-page {
+  position: relative;
+  isolation: isolate;
   padding-top: 80px;
+  overflow: hidden;
   background-color: var(--page);
   background-image:
     linear-gradient(rgba(221, 212, 199, 0.52) 1px, transparent 1px),
     linear-gradient(90deg, rgba(221, 212, 199, 0.52) 1px, transparent 1px);
   background-size: 48px 48px;
   background-attachment: fixed;
+}
+
+.app-page::before,
+.app-page::after {
+  position: fixed;
+  inset: -18vh -14vw;
+  z-index: 0;
+  pointer-events: none;
+  color: rgba(31, 36, 40, 0.055);
+  font-family: "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", SimHei, sans-serif;
+  font-weight: 900;
+  line-height: 1.9;
+  white-space: pre-wrap;
+}
+
+.app-page::before {
+  font-size: clamp(2.2rem, 4.6vw, 5.4rem);
+  letter-spacing: 0;
+  word-spacing: 2.3rem;
+  content:
+    "你好     学习     汉语     声调     拼音     今天\A"
+    "谢谢     老师     中国     朋友     练习     考试\A"
+    "读     写     听     说     记住     复习     词语\A"
+    "一     二     三     四     五     六     七     八     九\A"
+    "人     口     日     月     水     火     山     大\A"
+    "妈妈     爸爸     学生     医生     饭店     机场\A"
+    "阅读     听力     选择     答案     分数     目标";
+  transform: rotate(-7deg) translate3d(-2vw, -3vh, 0);
+}
+
+.app-page::after {
+  color: rgba(221, 75, 57, 0.038);
+  font-family: "Itim", "Mali", "Sriracha", "Leelawadee UI", "Segoe UI", Tahoma, Arial, sans-serif;
+  font-size: clamp(1.05rem, 2vw, 2.25rem);
+  line-height: 2.25;
+  word-spacing: 1.6rem;
+  content:
+    "ni hao     xue xi     han yu     sheng diao     pin yin     jin tian\A"
+    "xie xie     lao shi     zhong guo     peng you     lian xi     kao shi\A"
+    "du     xie     ting     shuo     ji zhu     fu xi     ci yu\A"
+    "yi     er     san     si     wu     liu     qi     ba     jiu\A"
+    "ren     kou     ri     yue     shui     huo     shan     da\A"
+    "ma ma     ba ba     xue sheng     yi sheng     fan dian     ji chang\A"
+    "yue du     ting li     xuan ze     da an     fen shu     mu biao";
+  transform: rotate(6deg) translate3d(6vw, 8vh, 0);
+}
+
+.app-page > * {
+  position: relative;
+  z-index: 1;
 }
 
 .vocabulary-page::before {
@@ -2929,6 +2982,93 @@ a {
   background: rgba(255, 255, 255, 0.34);
 }
 
+/* Softer glass surfaces for the admin workspace. */
+.admin-shell .admin-card,
+.admin-shell .admin-metric-card,
+.admin-shell .admin-welcome {
+  border-color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.54);
+  box-shadow: 0 14px 34px rgba(31, 51, 57, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(18px) saturate(135%);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+}
+
+.admin-shell .admin-card:hover,
+.admin-shell .admin-metric-card:hover {
+  border-color: rgba(34, 128, 107, 0.28);
+  box-shadow: 0 18px 38px rgba(31, 51, 57, 0.11), inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.admin-shell .admin-metric-card {
+  border-radius: 12px;
+}
+
+.admin-shell .admin-card {
+  border-radius: 12px;
+}
+
+/* High-tech control-center finish for the admin console. */
+.admin-shell {
+  background-color: #eaf2f2;
+  background-image:
+    linear-gradient(rgba(42, 137, 145, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(42, 137, 145, 0.1) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.admin-sidebar {
+  border-color: rgba(91, 214, 205, 0.24);
+  box-shadow: 0 20px 46px rgba(19, 50, 57, 0.24), 0 0 0 1px rgba(86, 202, 194, 0.06);
+}
+
+.admin-topbar {
+  border-color: rgba(74, 176, 177, 0.34);
+  background: rgba(242, 250, 249, 0.68);
+  box-shadow: 0 14px 34px rgba(19, 65, 71, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.86);
+}
+
+.admin-shell .admin-card,
+.admin-shell .admin-metric-card,
+.admin-shell .admin-welcome {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(76, 164, 166, 0.3);
+  border-radius: 8px;
+  background: rgba(248, 253, 252, 0.56);
+  box-shadow: 0 16px 36px rgba(29, 75, 81, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.admin-shell .admin-card::before,
+.admin-shell .admin-metric-card::before {
+  height: 2px;
+  background: rgba(44, 164, 164, 0.72);
+  box-shadow: 0 0 12px rgba(44, 164, 164, 0.35);
+}
+
+.admin-shell .admin-metric-card::before {
+  width: 100%;
+  right: 0;
+  bottom: auto;
+}
+
+.admin-shell .admin-card:hover,
+.admin-shell .admin-metric-card:hover {
+  border-color: rgba(39, 151, 153, 0.58);
+  box-shadow: 0 20px 44px rgba(29, 75, 81, 0.14), 0 0 18px rgba(54, 178, 174, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.admin-shell .admin-card-kicker,
+.admin-shell .admin-breadcrumb,
+.admin-shell .admin-eyebrow {
+  color: #187f82;
+  letter-spacing: 0.1em;
+}
+
+.admin-shell .admin-metric-card strong {
+  color: #173d45;
+  text-shadow: 0 0 18px rgba(43, 159, 158, 0.16);
+}
+
 @media (max-width: 900px) {
   .admin-exam-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
@@ -2989,4 +3129,363 @@ a {
   .admin-user-toolbar { align-items: stretch; flex-direction: column; width: 100%; }
   .admin-user-toolbar .admin-primary-button { width: 100%; }
   .admin-user-form { grid-template-columns: 1fr; }
+}
+
+/* Dark digital admin theme */
+.admin-shell {
+  --admin-dark-ink: #edf7f7;
+  --admin-dark-muted: #b8cdd0;
+  --admin-dark-soft: #d7eeee;
+  --admin-dark-line: rgba(99, 242, 232, 0.18);
+  --admin-dark-panel: rgba(9, 22, 27, 0.78);
+  --admin-dark-panel-soft: rgba(12, 30, 36, 0.66);
+  --admin-dark-cyan: #55f0df;
+  --admin-dark-lime: #a8f06a;
+  --admin-dark-red: #ff6b5c;
+  min-height: 100vh;
+  background-color: #071014;
+  background-image:
+    linear-gradient(rgba(85, 240, 223, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(85, 240, 223, 0.1) 1px, transparent 1px),
+    linear-gradient(rgba(168, 240, 106, 0.04) 2px, transparent 2px),
+    linear-gradient(90deg, rgba(168, 240, 106, 0.04) 2px, transparent 2px);
+  background-position: 0 0, 0 0, 10px 10px, 10px 10px;
+  background-size: 34px 34px, 34px 34px, 136px 136px, 136px 136px;
+  background-attachment: fixed;
+  color: var(--admin-dark-ink);
+}
+
+.admin-shell::before {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(4, 9, 12, 0.16), rgba(4, 9, 12, 0.7)),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 4px);
+  content: "";
+}
+
+.admin-main {
+  position: relative;
+  z-index: 1;
+}
+
+.admin-sidebar {
+  position: sticky;
+  top: 16px;
+  z-index: 2;
+  border-color: rgba(85, 240, 223, 0.28);
+  background: rgba(5, 17, 23, 0.84);
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.38), 0 0 28px rgba(85, 240, 223, 0.08);
+  backdrop-filter: blur(22px) saturate(145%);
+  -webkit-backdrop-filter: blur(22px) saturate(145%);
+}
+
+.admin-sidebar-brand strong,
+.admin-profile strong,
+.admin-topbar h1,
+.admin-page-intro h2,
+.admin-card h3,
+.admin-users-table td,
+.admin-vocabulary-table td,
+.admin-table td,
+.admin-summary-row strong,
+.admin-binding-row strong,
+.admin-table-meta strong,
+.admin-table-hanzi {
+  color: var(--admin-dark-ink);
+}
+
+.admin-sidebar-brand small,
+.admin-profile small,
+.admin-sidebar-link,
+.admin-sidebar-toggle,
+.admin-table th,
+.admin-users-table th,
+.admin-vocabulary-table th,
+.admin-card p,
+.admin-page-intro p,
+.admin-metric-card span,
+.admin-metric-card small,
+.admin-table-meta span,
+.admin-summary-row > div:first-child,
+.admin-users-table td small,
+.admin-vocabulary-table td,
+.admin-example-cell,
+.admin-word-card p,
+.admin-word-thai,
+.admin-empty,
+.admin-content-count,
+.admin-draft-badge,
+.admin-required-note,
+.admin-search,
+.admin-level-filter,
+.admin-user-form label {
+  color: var(--admin-dark-muted);
+}
+
+.admin-action-row strong,
+.admin-word-hanzi,
+.admin-users-table td strong,
+.admin-vocabulary-table td strong,
+.admin-table td strong,
+.admin-search input,
+.admin-level-filter select,
+.admin-user-form input,
+.admin-user-form select,
+.admin-users-table select,
+.admin-vocabulary-table td input,
+.admin-vocabulary-table td select,
+.admin-vocabulary-table td textarea,
+.admin-vocabulary-form input,
+.admin-vocabulary-form select,
+.admin-vocabulary-form textarea {
+  color: var(--admin-dark-soft);
+}
+
+.admin-sidebar-link:hover,
+.admin-sidebar-link.active,
+.admin-sidebar-toggle:hover {
+  background: rgba(85, 240, 223, 0.12);
+  color: #f7ffff;
+}
+
+.admin-sidebar-link.active {
+  box-shadow: inset 3px 0 0 var(--admin-dark-cyan), 0 0 18px rgba(85, 240, 223, 0.12);
+}
+
+.admin-sidebar-icon,
+.admin-logo,
+.admin-action-icon,
+.admin-avatar {
+  border-color: rgba(85, 240, 223, 0.34);
+  background: rgba(85, 240, 223, 0.1);
+  color: var(--admin-dark-cyan);
+}
+
+.admin-topbar,
+.admin-shell .admin-card,
+.admin-shell .admin-metric-card,
+.admin-shell .admin-table-card,
+.admin-shell .admin-table-wrap,
+.admin-word-card {
+  border-color: var(--admin-dark-line);
+  background: var(--admin-dark-panel);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(20px) saturate(135%);
+  -webkit-backdrop-filter: blur(20px) saturate(135%);
+}
+
+.admin-shell .admin-card,
+.admin-shell .admin-metric-card,
+.admin-word-card {
+  border-radius: 8px;
+}
+
+.admin-topbar {
+  background: rgba(6, 18, 25, 0.78);
+}
+
+.admin-shell .admin-card::before,
+.admin-shell .admin-metric-card::before {
+  background: var(--admin-dark-cyan);
+  box-shadow: 0 0 14px rgba(85, 240, 223, 0.46);
+}
+
+.admin-shell .admin-card:hover,
+.admin-shell .admin-metric-card:hover,
+.admin-word-card:hover {
+  border-color: rgba(85, 240, 223, 0.42);
+  box-shadow: 0 22px 54px rgba(0, 0, 0, 0.32), 0 0 24px rgba(85, 240, 223, 0.1);
+}
+
+.admin-card-kicker,
+.admin-breadcrumb,
+.admin-eyebrow,
+.admin-shell .admin-card-kicker,
+.admin-shell .admin-breadcrumb,
+.admin-shell .admin-eyebrow,
+.admin-live-status,
+.admin-status-badge,
+.admin-word-pinyin,
+.admin-metric-card strong,
+.admin-shell .admin-metric-card strong {
+  color: var(--admin-dark-cyan);
+  letter-spacing: 0;
+}
+
+.admin-shell .admin-metric-card strong {
+  color: #f4ffff;
+  text-shadow: 0 0 16px rgba(85, 240, 223, 0.42), 0 0 34px rgba(85, 240, 223, 0.18);
+}
+
+.admin-status-badge i,
+.admin-live-status i {
+  background: var(--admin-dark-lime);
+  box-shadow: 0 0 10px rgba(168, 240, 106, 0.75);
+}
+
+.admin-open-site,
+.admin-primary-button,
+.admin-outline-button,
+.admin-row-actions button,
+.admin-text-button {
+  border-color: rgba(85, 240, 223, 0.28);
+}
+
+.admin-primary-button {
+  background: var(--admin-dark-cyan);
+  color: #041114;
+  box-shadow: 0 0 18px rgba(85, 240, 223, 0.18);
+}
+
+.admin-open-site,
+.admin-outline-button,
+.admin-row-actions button {
+  background: rgba(85, 240, 223, 0.08);
+  color: var(--admin-dark-ink);
+}
+
+.admin-open-site:hover,
+.admin-outline-button:hover,
+.admin-row-actions button:hover {
+  border-color: var(--admin-dark-cyan);
+  background: rgba(85, 240, 223, 0.14);
+  color: #f7ffff;
+}
+
+.admin-text-button,
+.admin-row-actions button.danger,
+.admin-logout {
+  color: var(--admin-dark-red);
+}
+
+.admin-binding-row,
+.admin-action-row,
+.admin-table-meta,
+.admin-list-toolbar,
+.admin-users-table th,
+.admin-users-table td,
+.admin-vocabulary-table th,
+.admin-vocabulary-table td,
+.admin-table th,
+.admin-table td,
+.admin-sidebar-footer {
+  border-color: var(--admin-dark-line);
+}
+
+.admin-binding-row,
+.admin-progress,
+.admin-shell .admin-table th,
+.admin-shell .admin-users-table th,
+.admin-shell .admin-vocabulary-table th {
+  background: rgba(85, 240, 223, 0.06);
+}
+
+.admin-shell .admin-table tbody tr:hover,
+.admin-shell .admin-users-table tbody tr:hover,
+.admin-shell .admin-vocabulary-table tbody tr:hover {
+  background: rgba(85, 240, 223, 0.09);
+}
+
+.admin-search input,
+.admin-level-filter select,
+.admin-user-form input,
+.admin-user-form select,
+.admin-users-table select,
+.admin-users-table .admin-user-edit-row input,
+.admin-vocabulary-table td input,
+.admin-vocabulary-table td select,
+.admin-vocabulary-table td textarea,
+.admin-form-grid input,
+.admin-form-grid select,
+.admin-form-grid textarea,
+.admin-vocabulary-form input,
+.admin-vocabulary-form select,
+.admin-vocabulary-form textarea,
+.admin-batch-question input,
+.admin-batch-question select {
+  border-color: rgba(85, 240, 223, 0.2);
+  background: rgba(3, 14, 19, 0.76);
+  color: var(--admin-dark-ink);
+}
+
+.admin-shell input,
+.admin-shell select,
+.admin-shell textarea {
+  color-scheme: dark;
+}
+
+.admin-shell select,
+.admin-shell select option,
+.admin-shell select optgroup {
+  background-color: #061419;
+  color: var(--admin-dark-ink);
+}
+
+.admin-shell select option:checked,
+.admin-shell select option:hover {
+  background-color: #1f5f60;
+  color: #f7ffff;
+}
+
+.admin-batch-question-list,
+.admin-batch-question {
+  border-color: rgba(85, 240, 223, 0.2);
+  background: rgba(8, 24, 29, 0.72);
+  color: var(--admin-dark-ink);
+}
+
+.admin-search input::placeholder,
+.admin-form-grid input::placeholder,
+.admin-form-grid textarea::placeholder,
+.admin-vocabulary-form input::placeholder,
+.admin-vocabulary-form textarea::placeholder,
+.admin-users-table .admin-user-edit-row input::placeholder {
+  color: rgba(184, 205, 208, 0.62);
+}
+
+.admin-search input:focus,
+.admin-level-filter select:focus,
+.admin-user-form input:focus,
+.admin-user-form select:focus,
+.admin-users-table select:focus,
+.admin-vocabulary-table td input:focus,
+.admin-vocabulary-table td select:focus,
+.admin-vocabulary-table td textarea:focus,
+.admin-form-grid input:focus,
+.admin-form-grid select:focus,
+.admin-form-grid textarea:focus,
+.admin-vocabulary-form input:focus,
+.admin-vocabulary-form select:focus,
+.admin-vocabulary-form textarea:focus {
+  border-color: var(--admin-dark-cyan);
+  background: rgba(3, 14, 19, 0.9);
+  color: var(--admin-dark-ink);
+  box-shadow: 0 0 0 3px rgba(85, 240, 223, 0.13);
+}
+
+.admin-shell input[type="file"]::file-selector-button {
+  margin-right: 10px;
+  border: 1px solid rgba(85, 240, 223, 0.24);
+  border-radius: 5px;
+  background: rgba(85, 240, 223, 0.12);
+  color: var(--admin-dark-ink);
+  font: inherit;
+  font-weight: 800;
+}
+
+.admin-toast {
+  border-color: rgba(85, 240, 223, 0.36);
+  background: rgba(6, 22, 28, 0.92);
+  color: var(--admin-dark-cyan);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.36);
+}
+
+@media (max-width: 720px) {
+  .admin-sidebar {
+    position: static;
+    z-index: 1;
+  }
 }

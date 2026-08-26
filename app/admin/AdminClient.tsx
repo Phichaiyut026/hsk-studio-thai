@@ -577,7 +577,6 @@ function ExamsPanel({ questions, setMessage, onSaved }: { questions: AdminQuesti
 function OverviewPanel({ overview, busy, seedHskData, syncHuggingFaceData, setActiveTab }: { overview: SystemOverview | null; busy: boolean; seedHskData: () => Promise<void>; syncHuggingFaceData: () => Promise<void>; setActiveTab: (tab: AdminTab) => void }) {
   return (
     <div className="admin-content">
-      <section className="admin-welcome"><div><span className="admin-eyebrow">ศูนย์ควบคุม HSK Studio</span><h2>สวัสดีครับ, พร้อมจัดการระบบแล้ว</h2><p>ดูภาพรวมผู้เรียน ตรวจข้อมูลการเรียน และจัดการสิทธิ์ได้จากหน้านี้</p></div><div className="admin-welcome-mark">漢</div></section>
       <section className="admin-metrics-grid" aria-label="สรุประบบ">
         <Metric label="ผู้ใช้ทั้งหมด" value={overview?.users.total ?? 0} hint="บัญชีในระบบ" tone="red" />
         <Metric label="ผู้ดูแลระบบ" value={overview?.users.admins ?? 0} hint="บัญชีที่มีสิทธิ์ Admin" tone="blue" />
