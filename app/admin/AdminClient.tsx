@@ -47,8 +47,6 @@ type AdminTab = "overview" | "users" | "vocabulary" | "vocabulary-list" | "exams
 type AdminBootstrap = {
   overview: SystemOverview;
   users: AdminUser[];
-  vocabulary: AdminVocabulary[];
-  questions: AdminQuestion[];
 };
 
 async function fetchJsonWithRetry<T>(url: string, options?: RequestInit, attempts = 3): Promise<T | null> {
@@ -113,10 +111,13 @@ export default function AdminClient({
       if (!data) return;
       setOverview(data.overview);
       setUsers(data.users);
-      setVocabulary(data.vocabulary);
-      setQuestions(data.questions);
     })();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === "vocabulary-list") void loadVocabulary();
+    if (activeTab === "exams") void loadQuestions();
+  }, [activeTab]);
 
   async function changeRole(userId: string, role: "user" | "admin") {
     setMessage("กำลังบันทึกสิทธิ์...");
