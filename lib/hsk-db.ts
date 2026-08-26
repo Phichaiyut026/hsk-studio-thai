@@ -1,7 +1,7 @@
-import { count, eq, sql } from "drizzle-orm";
+import { count, desc, eq, sql } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { getDb } from "../db";
-import { quizAttempts, quizQuestions, users, vocabulary } from "../db/schema";
+import { adminAccessLogs, quizAttempts, quizQuestions, users, vocabulary } from "../db/schema";
 import { hskLevels, type Level } from "./hsk-data";
 import { hashPassword, verifyPassword } from "./password";
 
@@ -44,6 +44,18 @@ export type StudyQuestion = {
   questionNumber: number;
   mediaUrl?: string;
   imageUrl?: string;
+};
+
+export type AdminAccessLog = {
+  id: string;
+  userId: string;
+  email: string;
+  displayName: string;
+  action: string;
+  path: string;
+  userAgent: string;
+  ipAddress: string;
+  createdAt: string;
 };
 
 let schemaReady: Promise<void> | null = null;
@@ -159,6 +171,19 @@ async function initializeHskSchema() {
         created_at text DEFAULT CURRENT_TIMESTAMP NOT NULL
       )`,
     ),
+    d1.prepare(
+      `CREATE TABLE IF NOT EXISTS admin_access_logs (
+        id text PRIMARY KEY NOT NULL,
+        user_id text NOT NULL,
+        email text NOT NULL,
+        display_name text NOT NULL,
+        action text DEFAULT 'admin_page_view' NOT NULL,
+        path text DEFAULT '/admin' NOT NULL,
+        user_agent text DEFAULT '' NOT NULL,
+        ip_address text DEFAULT '' NOT NULL,
+        created_at text DEFAULT CURRENT_TIMESTAMP NOT NULL
+      )`,
+    ),
   ]);
 
   try {
@@ -203,6 +228,8 @@ async function initializeHskSchema() {
       "CREATE INDEX IF NOT EXISTS idx_quiz_attempts_session_created ON quiz_attempts (session_id, created_at)",
     ),
     d1.prepare("CREATE INDEX IF NOT EXISTS idx_quiz_attempts_question ON quiz_attempts (question_id)"),
+    d1.prepare("CREATE INDEX IF NOT EXISTS idx_admin_access_logs_created ON admin_access_logs (created_at)"),
+    d1.prepare("CREATE INDEX IF NOT EXISTS idx_admin_access_logs_user_created ON admin_access_logs (user_id, created_at)"),
     d1.prepare("PRAGMA optimize"),
   ]);
 }
@@ -466,6 +493,48 @@ export async function getSystemOverview(): Promise<SystemOverview> {
       status: "ready",
     },
   };
+}
+
+export async function recordAdminAccess(input: {
+  userId: string;
+  email: string;
+  displayName: string;
+  action?: string;
+  path?: string;
+  userAgent?: string;
+  ipAddress?: string;
+}) {
+  await ensureHskSchema();
+  await env.DB.prepare(
+    `INSERT INTO admin_access_logs
+      (id, user_id, email, display_name, action, path, user_agent, ip_address)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).bind(
+    `admin-access-${crypto.randomUUID()}`,
+    input.userId,
+    input.email,
+    input.displayName,
+    input.action ?? "admin_page_view",
+    input.path ?? "/admin",
+    input.userAgent ?? "",
+    input.ipAddress ?? "",
+  ).run();
+}
+
+export async function listAdminAccessLogs(limit = 20): Promise<AdminAccessLog[]> {
+  await ensureHskSchema();
+  const db = getDb();
+  return db.select({
+    id: adminAccessLogs.id,
+    userId: adminAccessLogs.userId,
+    email: adminAccessLogs.email,
+    displayName: adminAccessLogs.displayName,
+    action: adminAccessLogs.action,
+    path: adminAccessLogs.path,
+    userAgent: adminAccessLogs.userAgent,
+    ipAddress: adminAccessLogs.ipAddress,
+    createdAt: adminAccessLogs.createdAt,
+  }).from(adminAccessLogs).orderBy(desc(adminAccessLogs.createdAt)).limit(limit);
 }
 
 export async function listQuizQuestions() {

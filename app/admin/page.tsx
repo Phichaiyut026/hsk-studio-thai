@@ -1,5 +1,6 @@
+import { headers } from "next/headers";
 import { getAuthPaths, getChatGPTUser } from "../chatgpt-auth";
-import { ensureUserProfile } from "../../lib/hsk-db";
+import { ensureUserProfile, recordAdminAccess } from "../../lib/hsk-db";
 import AdminClient from "./AdminClient";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +31,19 @@ export default async function AdminPage() {
       </main>
     );
   }
+
+  const requestHeaders = await headers();
+  await recordAdminAccess({
+    userId: profile.userId,
+    email: profile.email,
+    displayName: profile.displayName,
+    path: "/admin",
+    userAgent: requestHeaders.get("user-agent") ?? "",
+    ipAddress:
+      requestHeaders.get("cf-connecting-ip") ??
+      requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      "",
+  });
 
   return <AdminClient authPaths={authPaths} user={user} />;
 }

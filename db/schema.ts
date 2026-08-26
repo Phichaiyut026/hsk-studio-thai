@@ -73,3 +73,22 @@ export const quizAttempts = sqliteTable(
     index("idx_quiz_attempts_question").on(table.questionId),
   ],
 );
+
+export const adminAccessLogs = sqliteTable(
+  "admin_access_logs",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    email: text("email").notNull(),
+    displayName: text("display_name").notNull(),
+    action: text("action").notNull().default("admin_page_view"),
+    path: text("path").notNull().default("/admin"),
+    userAgent: text("user_agent").notNull().default(""),
+    ipAddress: text("ip_address").notNull().default(""),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("idx_admin_access_logs_created").on(table.createdAt),
+    index("idx_admin_access_logs_user_created").on(table.userId, table.createdAt),
+  ],
+);

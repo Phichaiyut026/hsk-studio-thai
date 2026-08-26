@@ -37,13 +37,25 @@ type AdminQuestion = {
   imageUrl?: string;
 };
 
+type AdminAccessLog = {
+  id: string;
+  userId: string;
+  email: string;
+  displayName: string;
+  action: string;
+  path: string;
+  userAgent: string;
+  ipAddress: string;
+  createdAt: string;
+};
+
 type SystemOverview = {
   users: { total: number; admins: number; regular: number };
   content: { vocabulary: number; quizQuestions: number; quizAttempts: number };
   database: { binding: string; status: "ready" };
 };
 
-type AdminTab = "overview" | "users" | "vocabulary" | "vocabulary-list" | "exams";
+type AdminTab = "overview" | "users" | "vocabulary" | "vocabulary-list" | "exams" | "access-logs";
 type AdminBootstrap = {
   overview: SystemOverview;
   users: AdminUser[];
@@ -76,6 +88,7 @@ export default function AdminClient({
   const [activeTab, setActiveTab] = useState<AdminTab>("overview");
   const [overview, setOverview] = useState<SystemOverview | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [accessLogs, setAccessLogs] = useState<AdminAccessLog[]>([]);
   const [vocabulary, setVocabulary] = useState<AdminVocabulary[]>([]);
   const [questions, setQuestions] = useState<AdminQuestion[]>([]);
   const [message, setMessage] = useState("");
@@ -105,6 +118,11 @@ export default function AdminClient({
     if (data?.questions) setQuestions(data.questions);
   }
 
+  async function loadAccessLogs() {
+    const data = await fetchJsonWithRetry<{ accessLogs: AdminAccessLog[] }>("/api/admin/access-logs");
+    if (data?.accessLogs) setAccessLogs(data.accessLogs);
+  }
+
   useEffect(() => {
     void (async () => {
       const data = await fetchJsonWithRetry<AdminBootstrap>("/api/admin/bootstrap");
@@ -117,6 +135,7 @@ export default function AdminClient({
   useEffect(() => {
     if (activeTab === "vocabulary-list") void loadVocabulary();
     if (activeTab === "exams") void loadQuestions();
+    if (activeTab === "access-logs") void loadAccessLogs();
   }, [activeTab]);
 
   async function changeRole(userId: string, role: "user" | "admin") {
@@ -207,6 +226,7 @@ export default function AdminClient({
           <button type="button" title="เพิ่มคำศัพท์" className={`admin-sidebar-link ${activeTab === "vocabulary" ? "active" : ""}`} onClick={() => setActiveTab("vocabulary")}><span className="admin-sidebar-icon">V</span><span className="admin-sidebar-link-text">เพิ่มคำศัพท์</span></button>
           <button type="button" title="รายการคำศัพท์" className={`admin-sidebar-link ${activeTab === "vocabulary-list" ? "active" : ""}`} onClick={() => setActiveTab("vocabulary-list")}><span className="admin-sidebar-icon">L</span><span className="admin-sidebar-link-text">รายการคำศัพท์</span></button>
           <button type="button" title="ระบบสอบ HSK" className={`admin-sidebar-link ${activeTab === "exams" ? "active" : ""}`} onClick={() => setActiveTab("exams")}><span className="admin-sidebar-icon">E</span><span className="admin-sidebar-link-text">ระบบสอบ HSK</span></button>
+          <button type="button" title="บันทึกการเข้าใช้งาน" className={`admin-sidebar-link ${activeTab === "access-logs" ? "active" : ""}`} onClick={() => setActiveTab("access-logs")}><span className="admin-sidebar-icon">A</span><span className="admin-sidebar-link-text">Access Logs</span></button>
         </div>
         <div className="admin-sidebar-section">
           <span className="admin-sidebar-label">ทางลัด</span>
@@ -224,7 +244,7 @@ export default function AdminClient({
           <div><span className="admin-breadcrumb">Admin Console / {tabLabel(activeTab)}</span><h1>{tabTitle(activeTab)}</h1></div>
           <div className="admin-topbar-actions"><span className="admin-live-status"><i /> ระบบทำงานปกติ</span><a href="/" target="_blank" rel="noreferrer" className="admin-open-site">ดูเว็บไซต์</a></div>
         </header>
-        {activeTab === "overview" ? <OverviewPanel overview={overview} busy={busy} seedHskData={seedHskData} syncHuggingFaceData={syncHuggingFaceData} setActiveTab={setActiveTab} /> : activeTab === "users" ? <UsersPanel users={filteredUsers} query={query} setQuery={setQuery} currentUserEmail={user.email} changeRole={changeRole} onCreated={async () => { await loadUsers(); await loadOverview(); }} setMessage={setMessage} /> : activeTab === "vocabulary" ? <VocabularyPanel setMessage={setMessage} onSaved={loadVocabulary} /> : activeTab === "vocabulary-list" ? <VocabularyListPanel vocabulary={filteredVocabulary} query={vocabularyQuery} setQuery={setVocabularyQuery} level={vocabularyLevel} setLevel={setVocabularyLevel} setMessage={setMessage} onChanged={loadVocabulary} /> : <ExamsPanel questions={questions} setMessage={setMessage} onSaved={loadQuestions} />}
+        {activeTab === "overview" ? <OverviewPanel overview={overview} busy={busy} seedHskData={seedHskData} syncHuggingFaceData={syncHuggingFaceData} setActiveTab={setActiveTab} /> : activeTab === "users" ? <UsersPanel users={filteredUsers} query={query} setQuery={setQuery} currentUserEmail={user.email} changeRole={changeRole} onCreated={async () => { await loadUsers(); await loadOverview(); }} setMessage={setMessage} /> : activeTab === "vocabulary" ? <VocabularyPanel setMessage={setMessage} onSaved={loadVocabulary} /> : activeTab === "vocabulary-list" ? <VocabularyListPanel vocabulary={filteredVocabulary} query={vocabularyQuery} setQuery={setVocabularyQuery} level={vocabularyLevel} setLevel={setVocabularyLevel} setMessage={setMessage} onChanged={loadVocabulary} /> : activeTab === "exams" ? <ExamsPanel questions={questions} setMessage={setMessage} onSaved={loadQuestions} /> : <AccessLogsPanel accessLogs={accessLogs} onRefresh={loadAccessLogs} />}
         {message && <p className="admin-toast" role="status">{message}</p>}
       </main>
     </div>
@@ -232,11 +252,11 @@ export default function AdminClient({
 }
 
 function tabLabel(tab: AdminTab) {
-  return { overview: "Dashboard", users: "Users", vocabulary: "Add Vocabulary", "vocabulary-list": "Vocabulary List", exams: "HSK Exams" }[tab];
+  return { overview: "Dashboard", users: "Users", vocabulary: "Add Vocabulary", "vocabulary-list": "Vocabulary List", exams: "HSK Exams", "access-logs": "Access Logs" }[tab];
 }
 
 function tabTitle(tab: AdminTab) {
-  return { overview: "ภาพรวมระบบ", users: "ผู้ใช้และสิทธิ์", vocabulary: "เพิ่มคำศัพท์", "vocabulary-list": "รายการคำศัพท์ทั้งหมด", exams: "ระบบสอบ HSK" }[tab];
+  return { overview: "ภาพรวมระบบ", users: "ผู้ใช้และสิทธิ์", vocabulary: "เพิ่มคำศัพท์", "vocabulary-list": "รายการคำศัพท์ทั้งหมด", exams: "ระบบสอบ HSK", "access-logs": "บันทึกการเข้าใช้งาน" }[tab];
 }
 
 function VocabularyPanel({ setMessage, onSaved }: { setMessage: (message: string) => void; onSaved: () => Promise<void> }) {
@@ -524,6 +544,55 @@ function OverviewPanel({ overview, busy, seedHskData, syncHuggingFaceData, setAc
       <section className="admin-card admin-summary-card"><div className="admin-card-heading"><div><span className="admin-card-kicker">สรุปข้อมูล</span><h3>โครงสร้างผู้ใช้และเนื้อหา</h3></div><button type="button" className="admin-text-button" onClick={() => setActiveTab("users")}>ดูผู้ใช้ทั้งหมด →</button></div><div className="admin-summary-list"><SummaryRow label="ผู้ใช้ทั่วไป" value={overview?.users.regular ?? 0} total={overview?.users.total ?? 0} color="var(--blue)" /><SummaryRow label="คำถามแบบทดสอบ" value={overview?.content.quizQuestions ?? 0} total={overview?.content.quizQuestions ?? 0} color="var(--teal)" /><SummaryRow label="ผู้ดูแลระบบ" value={overview?.users.admins ?? 0} total={overview?.users.total ?? 0} color="var(--red)" /></div></section>
     </div>
   );
+}
+
+function AccessLogsPanel({ accessLogs, onRefresh }: { accessLogs: AdminAccessLog[]; onRefresh: () => Promise<void> }) {
+  return (
+    <div className="admin-content">
+      <section className="admin-page-intro">
+        <div>
+          <span className="admin-eyebrow">Security Monitor</span>
+          <h2>บันทึกการเข้าใช้งาน</h2>
+          <p>ตรวจสอบรายการเข้าใช้งานหน้า Admin ล่าสุดของผู้ดูแลระบบ</p>
+        </div>
+        <button type="button" className="admin-outline-button" onClick={() => void onRefresh()}>รีเฟรช log</button>
+      </section>
+      <section className="admin-card admin-access-log-card">
+        <div className="admin-card-heading">
+          <div>
+            <span className="admin-card-kicker">Access Log</span>
+            <h3>บันทึกการเข้าใช้งานล่าสุด</h3>
+          </div>
+          <span className="admin-content-count">{accessLogs.length.toLocaleString("th-TH")} รายการล่าสุด</span>
+        </div>
+        <div className="admin-access-log-list">
+          {accessLogs.map((log) => (
+            <article className="admin-access-log-row" key={log.id}>
+              <span className="admin-action-icon">A</span>
+              <span>
+                <strong>{log.displayName}</strong>
+                <small>{log.email}</small>
+              </span>
+              <span>
+                <strong>{formatAdminLogTime(log.createdAt)}</strong>
+                <small>{log.path}{log.ipAddress ? ` · ${log.ipAddress}` : ""}</small>
+              </span>
+            </article>
+          ))}
+          {!accessLogs.length && <p className="admin-empty">ยังไม่มีบันทึกการเข้าใช้งาน</p>}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function formatAdminLogTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("th-TH", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
 }
 
 function UsersPanel({ users, query, setQuery, currentUserEmail, changeRole, onCreated, setMessage }: { users: AdminUser[]; query: string; setQuery: (value: string) => void; currentUserEmail: string; changeRole: (userId: string, role: "user" | "admin") => Promise<void>; onCreated: () => Promise<void>; setMessage: (message: string) => void }) {
