@@ -1,5 +1,5 @@
 import { getChatGPTUser } from "../../chatgpt-auth";
-import { ensureHskSeedData, ensureUserProfile, saveQuizAttempt } from "../../../lib/hsk-db";
+import { ensureHskSchema, ensureUserProfile, saveQuizAttempt } from "../../../lib/hsk-db";
 
 function routeError(error: unknown) {
   const message = error instanceof Error ? error.message : "Unexpected error";
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
       );
     }
 
-    await ensureHskSeedData();
+    await ensureHskSchema();
     const result = await saveQuizAttempt({
       userId: user?.userId,
       sessionId,

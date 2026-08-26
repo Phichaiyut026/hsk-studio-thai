@@ -705,8 +705,14 @@ export async function getStudyData(sessionId: string) {
 
     return {
       ...level,
-      vocabulary: levelWords.length ? levelWords : level.vocabulary,
-      quiz: quizzes[0] ?? level.quiz,
+      vocabulary: levelWords,
+      quiz: quizzes[0] ?? {
+        ...level.quiz,
+        id: `empty-${level.id}`,
+        prompt: "",
+        answer: "",
+        choices: [],
+      },
       quizzes,
     };
   });
