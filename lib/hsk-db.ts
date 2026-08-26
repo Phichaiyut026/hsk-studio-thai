@@ -113,7 +113,7 @@ export async function ensureHskSeedData() {
   ]);
 }
 
-async function ensureHskSchema() {
+export async function ensureHskSchema() {
   if (!schemaReady) {
     schemaReady = initializeHskSchema().catch((error) => {
       schemaReady = null;
