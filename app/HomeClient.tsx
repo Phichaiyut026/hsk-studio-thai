@@ -160,8 +160,8 @@ export default function HomeClient({ authPaths, user, isAdmin }: Props) {
           <div className="teacher-photo-wrap">
             <img
               className="teacher-photo"
-              src="/img/teacher.jpg"
-              alt="ครูผู้สอนภาษาจีน"
+              src="/img/1.jpg"
+              alt="เม่นแนะนำตัว"
             />
           </div>
           <div className="teacher-copy">
