@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import SpeakButton from "../components/SpeakButton";
-import { hskLevels, type VocabWord } from "../../lib/hsk-data";
+import type { Level, VocabWord } from "../../lib/hsk-data";
 
 type Props = {
   authPaths: {
@@ -18,9 +18,19 @@ type Props = {
   isAdmin: boolean;
 };
 
+const levelSummaries = [
+  "พื้นฐานชีวิตประจำวัน",
+  "สื่อสารง่ายขึ้น",
+  "ต่อประโยคได้คล่อง",
+  "อ่านและตอบโต้มากขึ้น",
+  "ใช้ภาษาเชิงลึก",
+  "ใกล้ระดับใช้งานจริง",
+];
+
 export default function VocabularyClient({ authPaths, user, isAdmin }: Props) {
-  const [levels, setLevels] = useState(hskLevels);
-  const [selectedLevelId, setSelectedLevelId] = useState<string>("hsk1");
+  const [levels, setLevels] = useState<Level[]>([]);
+  const [selectedLevelId, setSelectedLevelId] = useState<string>("");
+  const [isLoadingLevels, setIsLoadingLevels] = useState(true);
   const [mode, setMode] = useState<"flashcard" | "list">("flashcard");
   const [listPage, setListPage] = useState(1);
   const [cardIndex, setCardIndex] = useState(0);
@@ -28,6 +38,7 @@ export default function VocabularyClient({ authPaths, user, isAdmin }: Props) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [masteredWords, setMasteredWords] = useState<string[]>([]);
+  const [toolsOpen, setToolsOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -40,12 +51,16 @@ export default function VocabularyClient({ authPaths, user, isAdmin }: Props) {
 
   useEffect(() => {
     let ignore = false;
+    setIsLoadingLevels(true);
     fetch("/api/study-data?sessionId=vocabulary")
       .then((response) => response.ok ? response.json() : null)
-      .then((data: { levels?: typeof hskLevels } | null) => {
+      .then((data: { levels?: Level[] } | null) => {
         if (!ignore && data?.levels?.length) setLevels(data.levels);
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => {
+        if (!ignore) setIsLoadingLevels(false);
+      });
     return () => { ignore = true; };
   }, []);
 
@@ -70,17 +85,13 @@ export default function VocabularyClient({ authPaths, user, isAdmin }: Props) {
     };
   }, []);
 
-  const currentLevel = useMemo(() => {
-    return levels.find((l) => l.id === selectedLevelId) || levels[0];
+  const currentLevel = useMemo<Level | null>(() => {
+    return levels.find((l) => l.id === selectedLevelId) || null;
   }, [levels, selectedLevelId]);
 
-  // All words across levels or within selected level
   const wordsForLevel = useMemo(() => {
-    if (selectedLevelId === "all") {
-      return levels.flatMap((l) => l.vocabulary);
-    }
-    return currentLevel.vocabulary;
-  }, [levels, selectedLevelId, currentLevel]);
+    return currentLevel?.vocabulary ?? [];
+  }, [currentLevel]);
 
   // Filtered words for list view and flashcard view
   const filteredWords = useMemo(() => {
@@ -104,6 +115,11 @@ export default function VocabularyClient({ authPaths, user, isAdmin }: Props) {
 
   useEffect(() => {
     setListPage(1);
+  }, [selectedLevelId, searchQuery, selectedCategory]);
+
+  useEffect(() => {
+    setCardIndex(0);
+    setFlipped(false);
   }, [selectedLevelId, searchQuery, selectedCategory]);
 
   useEffect(() => {
@@ -160,140 +176,164 @@ export default function VocabularyClient({ authPaths, user, isAdmin }: Props) {
       <div>
         <Navbar authPaths={authPaths} user={user} isAdmin={isAdmin} />
 
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-100/70 text-[var(--red)] text-xs font-bold uppercase tracking-wider mb-2">
-              คำศัพท์ & แฟลชการ์ด
+        <main className="vocabulary-shell">
+          {!selectedLevelId && (
+            <div className="vocabulary-hero">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-100/70 text-[var(--red)] text-xs font-bold uppercase tracking-wider mb-2">
+                คำศัพท์ & แฟลชการ์ด
+              </div>
+              <h1>
+                คลังคำศัพท์ HSK
+              </h1>
+              <p>
+                เลือกระดับ แล้วเริ่มทบทวนคำศัพท์ ฟังเสียง หรือเล่นเกมของระดับนั้น
+              </p>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-black text-[var(--ink)]">
-              คลังคำศัพท์และบัตรคำ HSK
-            </h1>
-            <p className="text-[var(--muted)] text-base mt-2 max-w-2xl">
-              ทบทวนคำศัพท์ภาษาจีนพร้อมระบบออกเสียง ตัวอย่างประโยค แปลไทย
-              และโหมดสลับดูทั้งแบบบัตรคำทบทวน หรือค้นหาในตารางคำศัพท์
-            </p>
-          </div>
+          )}
 
-          {/* Level Selector Tabs */}
-          <div className="flex flex-wrap gap-2.5 mb-6">
-            {levels.map((lvl) => (
-              <button
-                key={lvl.id}
-                type="button"
-                onClick={() => {
-                  setSelectedLevelId(lvl.id);
-                  setCardIndex(0);
-                  setFlipped(false);
-                }}
-                className={`px-4 py-2.5 rounded-xl font-bold text-sm transition-all border ${
-                  selectedLevelId === lvl.id
-                    ? "bg-[var(--ink)] text-white border-[var(--ink)] shadow-sm scale-102"
-                    : "bg-[var(--paper)] text-[var(--ink)] border-[var(--line)] hover:border-black/30"
-                }`}
-              >
-                {lvl.title}{" "}
-                <span className="opacity-70 text-xs font-normal">
-                  ({lvl.vocabulary.length} คำ)
-                </span>
-              </button>
-            ))}
+          {!selectedLevelId && (
+            <section className="vocabulary-level-overview" aria-label="เลือกระดับ HSK">
+              {isLoadingLevels ? (
+                <div className="vocabulary-empty-state">กำลังโหลดระดับคำศัพท์...</div>
+              ) : levels.length > 0 ? (
+                levels.map((lvl, index) => {
+                  const masteredInLevel = lvl.vocabulary.filter((word) => masteredWords.includes(word.id)).length;
+                  const totalWords = lvl.vocabulary.length;
+                  const percent = totalWords ? Math.round((masteredInLevel / totalWords) * 100) : 0;
+                  const summary = levelSummaries[index] ?? "ทบทวนคำศัพท์";
+                  return (
+                    <button
+                      key={lvl.id}
+                      type="button"
+                      onClick={() => setSelectedLevelId(lvl.id)}
+                      className="vocabulary-level-choice"
+                      style={{ "--level-accent": lvl.color || "#dd4b39" } as CSSProperties}
+                    >
+                      <span className="vocabulary-level-watermark" aria-hidden="true">
+                        {index + 1}
+                      </span>
+                      <span className="vocabulary-level-orb">{index + 1}</span>
+                      <span className="vocabulary-level-main">
+                        <span className="vocabulary-level-kicker">ระดับคำศัพท์</span>
+                        <strong>{lvl.title}</strong>
+                        <small>{summary}</small>
+                      </span>
+                      <span className="vocabulary-level-meta">
+                        <span>{totalWords.toLocaleString("th-TH")} คำ</span>
+                        <span>{masteredInLevel.toLocaleString("th-TH")} จำได้แล้ว</span>
+                      </span>
+                      <span className="vocabulary-level-progress" aria-label={`จำได้แล้ว ${percent}%`}>
+                        <i style={{ width: `${percent}%` }} />
+                      </span>
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="vocabulary-empty-state">
+                  ยังไม่มีคำศัพท์ในฐานข้อมูล ไปเพิ่มคำศัพท์ในหน้า Admin ก่อนครับ
+                </div>
+              )}
+            </section>
+          )}
+
+          {selectedLevelId && currentLevel && (
+            <>
+          <section className="vocabulary-level-detail">
+            <button type="button" onClick={() => setSelectedLevelId("")} className="vocabulary-back-button">
+              ← เลือกระดับ HSK อื่น
+            </button>
+            <div className="vocabulary-detail-heading">
+              <div>
+                <span>กำลังทบทวน</span>
+                <h2>{currentLevel.title}</h2>
+                <p>เลือกโหมด แล้วเริ่มทบทวนคำศัพท์</p>
+              </div>
+              <div className="vocabulary-detail-count">
+                <strong>{wordsForLevel.length.toLocaleString("th-TH")}</strong>
+                <span>คำศัพท์</span>
+              </div>
+            </div>
+          </section>
+
+          <aside className="vocabulary-toolbar" aria-label="เครื่องมือคำศัพท์">
             <button
               type="button"
-              onClick={() => {
-                setSelectedLevelId("all");
-                setCardIndex(0);
-                setFlipped(false);
-              }}
-              className={`px-4 py-2.5 rounded-xl font-bold text-sm transition-all border ${
-                selectedLevelId === "all"
-                  ? "bg-[var(--ink)] text-white border-[var(--ink)] shadow-sm scale-102"
-                  : "bg-[var(--paper)] text-[var(--ink)] border-[var(--line)] hover:border-black/30"
-              }`}
+              className="vocabulary-tools-toggle"
+              onClick={() => setToolsOpen((open) => !open)}
+              aria-expanded={toolsOpen}
             >
-              รวมทุกระดับ
+              <span>เครื่องมือ</span>
+              <strong>{toolsOpen ? "ปิด" : "เปิด"}</strong>
             </button>
-          </div>
-
-          {/* Controls Bar: Mode toggle & Search */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-4 rounded-2xl bg-[var(--paper)] border border-[var(--line)] mb-8 shadow-xs">
-            <a
-              href={`/vocabulary/game?level=${encodeURIComponent(selectedLevelId)}`}
-              className="vocabulary-game-launch"
-            >
-              <span aria-hidden="true">▶</span>
-              <span>เริ่มเกมทบทวน</span>
-            </a>
-            {/* View Mode Toggle */}
-            <div className="flex items-center p-1 bg-black/5 rounded-xl self-start sm:self-auto">
-              <button
-                type="button"
-                onClick={() => setMode("flashcard")}
-                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                  mode === "flashcard"
-                    ? "bg-white text-[var(--ink)] shadow-xs"
-                    : "text-[var(--muted)] hover:text-black"
-                }`}
+            <div className={`vocabulary-tools-panel ${toolsOpen ? "is-open" : ""}`}>
+              <a
+                href={`/vocabulary/game?level=${encodeURIComponent(selectedLevelId)}`}
+                className="vocabulary-game-launch"
               >
-                <span>โหมดบัตรคำ</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode("list")}
-                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                  mode === "list"
-                    ? "bg-white text-[var(--ink)] shadow-xs"
-                    : "text-[var(--muted)] hover:text-black"
-                }`}
-              >
-                <span>โหมดตารางคำศัพท์</span>
-              </button>
-            </div>
-
-            {/* Category Filter Chips */}
-            <div className="flex items-center gap-1.5 overflow-x-auto py-1">
-              {["all", "คำนาม", "คำกริยา", "คำคุณศัพท์", "คำเชื่อม"].map((cat) => (
+                <span aria-hidden="true">▶</span>
+                <span>เริ่มเกมทบทวน</span>
+              </a>
+              <div className="vocabulary-tool-group">
                 <button
-                  key={cat}
                   type="button"
                   onClick={() => {
-                    setSelectedCategory(cat);
-                    setCardIndex(0);
+                    setMode("flashcard");
+                    setToolsOpen(false);
                   }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                    selectedCategory === cat
-                      ? "bg-[var(--ink)] text-white"
-                      : "bg-white border border-[var(--line)] text-[var(--muted)] hover:text-black"
-                  }`}
+                  className={`vocabulary-tool-button ${mode === "flashcard" ? "is-active" : ""}`}
                 >
-                  {cat === "all" ? "หมวดหมู่ทั้งหมด" : cat}
+                  <span>โหมดบัตรคำ</span>
                 </button>
-              ))}
-            </div>
-
-            {/* Search Input */}
-            <div className="relative flex-1 max-w-md">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCardIndex(0);
-                }}
-                placeholder="ค้นหาตัวจีน, พินอิน หรือคำแปลไทย..."
-                className="w-full px-4 py-2 text-sm bg-white border border-[var(--line)] rounded-xl focus:outline-none focus:border-[var(--ink)] transition-colors"
-              />
-              {searchQuery && (
                 <button
                   type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-black text-xs font-bold"
+                  onClick={() => {
+                    setMode("list");
+                    setToolsOpen(false);
+                  }}
+                  className={`vocabulary-tool-button ${mode === "list" ? "is-active" : ""}`}
                 >
-                  ล้าง
+                  <span>โหมดตารางคำศัพท์</span>
                 </button>
-              )}
+              </div>
+
+              <div className="vocabulary-tool-group">
+                {["all", "คำนาม", "คำกริยา", "คำคุณศัพท์", "คำเชื่อม"].map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory(cat);
+                      setCardIndex(0);
+                      setToolsOpen(false);
+                    }}
+                    className={`vocabulary-tool-button ${selectedCategory === cat ? "is-active" : ""}`}
+                  >
+                    {cat === "all" ? "หมวดหมู่ทั้งหมด" : cat}
+                  </button>
+                ))}
+              </div>
+
+              <div className="vocabulary-tool-search">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCardIndex(0);
+                  }}
+                  placeholder="ค้นหาตัวจีน, พินอิน หรือคำแปลไทย..."
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                  >
+                    ล้าง
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
+          </aside>
 
           {/* MODE 1: FLASHCARD VIEW */}
           {mode === "flashcard" && (
@@ -448,7 +488,7 @@ export default function VocabularyClient({ authPaths, user, isAdmin }: Props) {
                             {word.hanzi}
                           </span>
                           <div className="flex items-center gap-1.5">
-                            <SpeakButton text={word.hanzi} label="ฟัง" className="p-1.5" />
+                            <SpeakButton text={word.hanzi} label="ฟัง" className="vocab-mini-audio-button" />
                             {word.category && (
                               <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-600">
                                 {word.category}
@@ -484,7 +524,7 @@ export default function VocabularyClient({ authPaths, user, isAdmin }: Props) {
                           <SpeakButton
                             text={word.example}
                             label="ฟังประโยค"
-                            className="text-[10px] py-1"
+                            className="vocab-mini-audio-button"
                           />
                         </div>
                       </div>
@@ -501,6 +541,8 @@ export default function VocabularyClient({ authPaths, user, isAdmin }: Props) {
                 </div>
               </div>
             </div>
+          )}
+            </>
           )}
         </main>
       </div>
