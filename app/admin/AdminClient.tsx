@@ -44,6 +44,29 @@ type SystemOverview = {
 };
 
 type AdminTab = "overview" | "users" | "vocabulary" | "vocabulary-list" | "exams";
+type AdminBootstrap = {
+  overview: SystemOverview;
+  users: AdminUser[];
+  vocabulary: AdminVocabulary[];
+  questions: AdminQuestion[];
+};
+
+async function fetchJsonWithRetry<T>(url: string, options?: RequestInit, attempts = 3): Promise<T | null> {
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        if (attempt === attempts) return null;
+      } else {
+        return (await response.json()) as T;
+      }
+    } catch {
+      if (attempt === attempts) return null;
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, 180 * attempt));
+  }
+  return null;
+}
 
 export default function AdminClient({
   authPaths,
@@ -65,35 +88,34 @@ export default function AdminClient({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   async function loadUsers() {
-    const response = await fetch("/api/admin/users");
-    if (!response.ok) return;
-    const data = (await response.json()) as { users: AdminUser[] };
-    setUsers(data.users);
+    const data = await fetchJsonWithRetry<{ users: AdminUser[] }>("/api/admin/users");
+    if (data?.users) setUsers(data.users);
   }
 
   async function loadOverview() {
-    const response = await fetch("/api/admin/system");
-    if (!response.ok) return;
-    const data = (await response.json()) as { overview: SystemOverview };
-    setOverview(data.overview);
+    const data = await fetchJsonWithRetry<{ overview: SystemOverview }>("/api/admin/system");
+    if (data?.overview) setOverview(data.overview);
   }
 
   async function loadVocabulary() {
-    const response = await fetch("/api/admin/vocabulary");
-    if (!response.ok) return;
-    const data = (await response.json()) as { vocabulary: AdminVocabulary[] };
-    setVocabulary(data.vocabulary);
+    const data = await fetchJsonWithRetry<{ vocabulary: AdminVocabulary[] }>("/api/admin/vocabulary");
+    if (data?.vocabulary) setVocabulary(data.vocabulary);
   }
 
   async function loadQuestions() {
-    const response = await fetch("/api/admin/exams");
-    if (!response.ok) return;
-    const data = (await response.json()) as { questions: AdminQuestion[] };
-    setQuestions(data.questions);
+    const data = await fetchJsonWithRetry<{ questions: AdminQuestion[] }>("/api/admin/exams");
+    if (data?.questions) setQuestions(data.questions);
   }
 
   useEffect(() => {
-    void Promise.all([loadOverview(), loadUsers(), loadVocabulary(), loadQuestions()]);
+    void (async () => {
+      const data = await fetchJsonWithRetry<AdminBootstrap>("/api/admin/bootstrap");
+      if (!data) return;
+      setOverview(data.overview);
+      setUsers(data.users);
+      setVocabulary(data.vocabulary);
+      setQuestions(data.questions);
+    })();
   }, []);
 
   async function changeRole(userId: string, role: "user" | "admin") {
@@ -104,7 +126,10 @@ export default function AdminClient({
       body: JSON.stringify({ userId, role }),
     });
     setMessage(response.ok ? "บันทึกสิทธิ์เรียบร้อย" : "บันทึกสิทธิ์ไม่สำเร็จ");
-    if (response.ok) await Promise.all([loadUsers(), loadOverview()]);
+    if (response.ok) {
+      await loadUsers();
+      await loadOverview();
+    }
   }
 
   async function seedHskData() {
@@ -198,7 +223,7 @@ export default function AdminClient({
           <div><span className="admin-breadcrumb">Admin Console / {tabLabel(activeTab)}</span><h1>{tabTitle(activeTab)}</h1></div>
           <div className="admin-topbar-actions"><span className="admin-live-status"><i /> ระบบทำงานปกติ</span><a href="/" target="_blank" rel="noreferrer" className="admin-open-site">ดูเว็บไซต์</a></div>
         </header>
-        {activeTab === "overview" ? <OverviewPanel overview={overview} busy={busy} seedHskData={seedHskData} syncHuggingFaceData={syncHuggingFaceData} setActiveTab={setActiveTab} /> : activeTab === "users" ? <UsersPanel users={filteredUsers} query={query} setQuery={setQuery} currentUserEmail={user.email} changeRole={changeRole} onCreated={() => Promise.all([loadUsers(), loadOverview()])} setMessage={setMessage} /> : activeTab === "vocabulary" ? <VocabularyPanel setMessage={setMessage} onSaved={loadVocabulary} /> : activeTab === "vocabulary-list" ? <VocabularyListPanel vocabulary={filteredVocabulary} query={vocabularyQuery} setQuery={setVocabularyQuery} level={vocabularyLevel} setLevel={setVocabularyLevel} setMessage={setMessage} onChanged={loadVocabulary} /> : <ExamsPanel questions={questions} setMessage={setMessage} onSaved={loadQuestions} />}
+        {activeTab === "overview" ? <OverviewPanel overview={overview} busy={busy} seedHskData={seedHskData} syncHuggingFaceData={syncHuggingFaceData} setActiveTab={setActiveTab} /> : activeTab === "users" ? <UsersPanel users={filteredUsers} query={query} setQuery={setQuery} currentUserEmail={user.email} changeRole={changeRole} onCreated={async () => { await loadUsers(); await loadOverview(); }} setMessage={setMessage} /> : activeTab === "vocabulary" ? <VocabularyPanel setMessage={setMessage} onSaved={loadVocabulary} /> : activeTab === "vocabulary-list" ? <VocabularyListPanel vocabulary={filteredVocabulary} query={vocabularyQuery} setQuery={setVocabularyQuery} level={vocabularyLevel} setLevel={setVocabularyLevel} setMessage={setMessage} onChanged={loadVocabulary} /> : <ExamsPanel questions={questions} setMessage={setMessage} onSaved={loadQuestions} />}
         {message && <p className="admin-toast" role="status">{message}</p>}
       </main>
     </div>

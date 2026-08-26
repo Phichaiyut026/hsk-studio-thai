@@ -55,13 +55,14 @@ function renderLoginPage(returnTo: string, error = "", username = "") {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>เข้าสู่ระบบ | HSK Studio</title>
   <style>
+    @font-face { font-family: "Itim"; src: url("/fonts/Itim-Regular.ttf") format("truetype"); font-weight: 400 900; font-style: normal; font-display: swap; }
     :root { color-scheme: light; --page: #f7f3ec; --ink: #1f2428; --muted: #667069; --line: #ddd4c7; --paper: #fffdf8; --red: #dd4b39; }
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; background-color: var(--page); background-image: linear-gradient(rgba(221, 212, 199, 0.52) 1px, transparent 1px), linear-gradient(90deg, rgba(221, 212, 199, 0.52) 1px, transparent 1px); background-size: 48px 48px; background-attachment: fixed; color: var(--ink); font-family: Arial, Helvetica, sans-serif; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; background-color: var(--page); background-image: linear-gradient(rgba(221, 212, 199, 0.52) 1px, transparent 1px), linear-gradient(90deg, rgba(221, 212, 199, 0.52) 1px, transparent 1px); background-size: 48px 48px; background-attachment: fixed; color: var(--ink); font-family: "Itim", "Mali", "Sriracha", "Leelawadee UI", "Segoe UI", Tahoma, Arial, sans-serif; font-size: 17px; font-feature-settings: "kern"; line-height: 1.62; text-rendering: optimizeLegibility; }
     main { width: min(100%, 420px); }
     a { color: inherit; }
     .brand { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 22px; text-decoration: none; font-weight: 900; }
-    .mark { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 8px; background: var(--ink); color: var(--paper); font-size: 1.35rem; }
+    .mark { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 8px; background: var(--ink); color: var(--paper); font-family: "Microsoft YaHei UI", "Microsoft YaHei", SimHei, sans-serif; font-size: 1.35rem; }
     form { border: 1px solid var(--line); border-radius: 8px; background: var(--paper); padding: 28px; box-shadow: 0 22px 60px rgba(41, 38, 32, 0.08); }
     h1 { margin: 0; font-size: 2rem; line-height: 1.08; }
     p { margin: 10px 0 24px; color: var(--muted); line-height: 1.6; }

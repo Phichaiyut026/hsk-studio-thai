@@ -318,105 +318,73 @@ export default function VocabularyClient({ authPaths, user, isAdmin }: Props) {
                   </div>
 
                   {/* Flip Card Button */}
-                  <div className="rounded-3xl border border-[var(--line)] bg-[var(--paper)] shadow-lg min-h-[380px] p-8 flex flex-col justify-between items-center transition-all hover:shadow-xl relative overflow-hidden group">
+                  <section className={`vocab-flip-stage ${flipped ? "is-flipped" : ""}`}>
                     <button
                       type="button"
                       onClick={() => setFlipped(!flipped)}
-                      className="w-full flex-1 flex flex-col items-center justify-center cursor-pointer text-center"
+                      className="vocab-flip-card"
                       aria-label="พลิกบัตรคำศัพท์"
                     >
-                      {!flipped ? (
-                        /* FRONT SIDE */
-                        <div className="w-full flex flex-col items-center justify-center gap-4">
-                          <span className="text-xs font-bold text-[var(--muted)] tracking-wider">
-                            ตัวอักษรจีน & พินอิน (แตะเพื่อดูความหมาย)
+                      <span className="vocab-card-face vocab-card-front">
+                        <span className="vocab-card-kicker">ตัวอักษรจีน & พินอิน</span>
+                        <span className="vocab-card-hanzi">{activeWord.hanzi}</span>
+                        <span className="vocab-card-pinyin">{activeWord.pinyin}</span>
+                        <span className="vocab-card-hint">แตะการ์ดเพื่อดูความหมาย</span>
+                      </span>
+                      <span className="vocab-card-face vocab-card-back">
+                        <span className="vocab-card-kicker">คำแปลและความหมาย</span>
+                        <span className="vocab-card-meaning">{activeWord.thai}</span>
+                        <span className="vocab-card-pair">
+                          {activeWord.hanzi} · {activeWord.pinyin}
+                        </span>
+                        {activeWord.example && (
+                          <span className="vocab-card-example">
+                            <b>ตัวอย่าง</b>
+                            <span>{activeWord.example}</span>
+                            {activeWord.examplePinyin && <small>{activeWord.examplePinyin}</small>}
+                            {activeWord.exampleThai && <em>{activeWord.exampleThai}</em>}
                           </span>
-                          <span className="text-6xl sm:text-7xl font-black text-[var(--ink)] tracking-wide group-hover:scale-105 transition-transform block">
-                            {activeWord.hanzi}
-                          </span>
-                          <span className="text-xl sm:text-2xl font-semibold text-[var(--muted)] tracking-widest block">
-                            {activeWord.pinyin}
-                          </span>
-                        </div>
-                      ) : (
-                        /* BACK SIDE */
-                        <div className="w-full flex flex-col items-center justify-center gap-4">
-                          <span className="text-xs font-bold text-[var(--teal)] tracking-wider">
-                            คำแปลและความหมาย
-                          </span>
-                          <span className="text-3xl sm:text-4xl font-black text-[var(--teal)] block">
-                            {activeWord.thai}
-                          </span>
-                          <span className="text-sm text-[var(--muted)] block">
-                            {activeWord.hanzi} ({activeWord.pinyin})
-                          </span>
-                        </div>
-                      )}
+                        )}
+                      </span>
                     </button>
 
-                    {/* Audio & Example controls */}
-                    <div className="w-full flex flex-col items-center gap-3 pt-3">
-                      <div className="flex items-center gap-2">
+                    <div className="vocab-card-toolbar">
+                      <div className="vocab-audio-actions">
                         <SpeakButton
                           text={activeWord.hanzi}
                           label="ฟังเสียงคำนี้"
-                          className="bg-white px-4 py-2 text-sm"
+                          className="vocab-audio-button"
                         />
                         {activeWord.example && (
                           <SpeakButton
                             text={activeWord.example}
                             label="ฟังประโยคตัวอย่าง"
-                            className="bg-white px-4 py-2 text-sm"
+                            className="vocab-audio-button"
                           />
                         )}
                       </div>
-
-                      {flipped && activeWord.example && (
-                        <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200/70 text-left w-full max-w-lg">
-                          <span className="text-xs font-bold text-amber-800 uppercase tracking-wider block mb-1">
-                            ตัวอย่างประโยค:
-                          </span>
-                          <p className="text-base font-bold text-amber-950">
-                            {activeWord.example}
-                          </p>
-                          {activeWord.examplePinyin && (
-                            <p className="text-xs font-medium text-amber-800 mt-0.5">
-                              {activeWord.examplePinyin}
-                            </p>
-                          )}
-                          {activeWord.exampleThai && (
-                            <p className="text-xs text-amber-900/80 mt-1">
-                              {activeWord.exampleThai}
-                            </p>
-                          )}
-                        </div>
-                      )}
+                      <div className="vocab-card-actions">
+                        <button
+                          type="button"
+                          onClick={() => toggleMastered(activeWord.id)}
+                          className={`vocab-mastery-button ${
+                            masteredWords.includes(activeWord.id) ? "is-mastered" : ""
+                          }`}
+                        >
+                          {masteredWords.includes(activeWord.id)
+                            ? "จำได้แล้ว"
+                            : "ทำเครื่องหมายว่าจำได้"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFlipped(!flipped)}
+                          className="vocab-flip-action"
+                        >
+                          พลิกการ์ด
+                        </button>
+                      </div>
                     </div>
-
-                    {/* Bottom action inside card */}
-                    <div className="w-full flex items-center justify-between pt-4 border-t border-[var(--line)]/50 mt-4 text-xs">
-                      <button
-                        type="button"
-                        onClick={() => toggleMastered(activeWord.id)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-colors ${
-                          masteredWords.includes(activeWord.id)
-                            ? "bg-green-100 text-green-800 border border-green-300"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        }`}
-                      >
-                        {masteredWords.includes(activeWord.id)
-                          ? "จำได้แล้ว"
-                          : "ทำเครื่องหมายว่าจำได้"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFlipped(!flipped)}
-                        className="text-[var(--muted)] font-semibold hover:text-black"
-                      >
-                        แตะเพื่อพลิกการ์ด
-                      </button>
-                    </div>
-                  </div>
+                  </section>
 
                   {/* Forward Navigation controls */}
                   <div className="grid grid-cols-2 gap-3 mt-5">

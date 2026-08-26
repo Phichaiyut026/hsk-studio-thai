@@ -78,7 +78,7 @@ export default function HomeClient({ authPaths, user, isAdmin }: Props) {
         <section className="hero">
           <div className="hero-grid">
             <div className="hero-copy">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-100/70 text-[var(--red)] text-xs font-bold uppercase tracking-wider mb-4">
+              <div className="hero-kicker inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-100/70 text-[var(--red)] text-xs font-bold uppercase tracking-wider mb-4">
                 แพลตฟอร์มเรียนจีนสำหรับผู้เรียนไทย
               </div>
               <h1 className="text-4xl sm:text-6xl font-black text-[var(--ink)] tracking-tight leading-tight">

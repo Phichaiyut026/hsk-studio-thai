@@ -3,7 +3,26 @@
 import { useEffect, useMemo, useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import { hskLevels, type Level, type QuizItem } from "../../lib/hsk-data";
+type QuizItem = {
+  id: string;
+  prompt: string;
+  answer: string;
+  choices: string[];
+  documentId?: string;
+  part?: "listening" | "reading" | "writing";
+  section?: string;
+  format?: "choice" | "true-false" | "image-choice" | "matching" | "fill-blank";
+  questionNumber?: number;
+  mediaUrl?: string;
+  imageUrl?: string;
+};
+
+type Level = {
+  id: string;
+  title: string;
+  quiz: QuizItem;
+  quizzes?: QuizItem[];
+};
 
 type QuizStats = {
   totalAttempts: number;
@@ -43,8 +62,55 @@ function getSessionId() {
   return next;
 }
 
+function SectionQuestionList({
+  questions,
+  startIndex,
+  answers,
+  audioUrl,
+  onConfirm,
+}: {
+  questions: Array<{ question: QuizItem; index: number }>;
+  startIndex: number;
+  answers: Record<number, string>;
+  audioUrl: string;
+  onConfirm: (index: number, answer: string) => void;
+}) {
+  const [draftAnswers, setDraftAnswers] = useState<Record<number, string>>(answers);
+
+  useEffect(() => setDraftAnswers(answers), [answers, startIndex]);
+
+  return (
+    <div className="quiz-section-question-list space-y-4">
+      {audioUrl && <audio controls preload="metadata" src={audioUrl} className="quiz-audio-player mb-2">เบราว์เซอร์นี้ไม่รองรับการเล่นเสียง</audio>}
+      {questions.map(({ question, index }) => {
+        const draft = draftAnswers[index] ?? answers[index] ?? "";
+        const imageChoices = question.format === "image-choice" || (question.part === "listening" && question.format === "matching");
+        let choiceImages: string[] = [];
+        if (imageChoices) {
+          try { choiceImages = JSON.parse(question.imageUrl || "[]") as string[]; } catch { choiceImages = []; }
+        }
+        return (
+          <article key={question.id} className="quiz-question-card p-5 sm:p-7 rounded-2xl bg-[var(--paper)] border border-[var(--line)] shadow-sm">
+            <div className="flex items-center justify-between gap-3 mb-4"><span className="text-xs font-black text-[var(--red)]">ข้อ {question.questionNumber ?? index + 1}</span><span className="text-xs font-bold text-[var(--muted)]">{question.format ?? "choice"}</span></div>
+            {question.imageUrl && !imageChoices && <img src={question.imageUrl} alt="ภาพประกอบข้อสอบ" className="max-h-48 max-w-full object-contain rounded-lg border border-[var(--line)] mb-4" />}
+            {question.prompt && <h2 className="text-lg sm:text-xl font-black text-[var(--ink)] leading-snug mb-4">{question.prompt}</h2>}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {question.choices.map((choice, choiceIndex) => {
+                const selected = draft === choice;
+                return <button key={choice} type="button" onClick={() => setDraftAnswers((current) => ({ ...current, [index]: choice }))} className={`p-3 rounded-xl border text-left font-bold transition-all ${selected ? "border-[var(--ink)] bg-[#e9f1ef] ring-2 ring-[var(--teal)]/30" : "bg-white border-[var(--line)] hover:border-black/40"}`}><span className="flex items-center gap-3">{imageChoices && choiceImages[choiceIndex] && <img src={choiceImages[choiceIndex]} alt={`ตัวเลือก ${choice}`} className="h-20 w-20 object-contain rounded-lg border border-[var(--line)]" />}<span>{choice}</span></span></button>;
+              })}
+            </div>
+            {draft && <div className="flex justify-end mt-4"><button type="button" onClick={() => onConfirm(index, draft)} className="px-5 py-2.5 rounded-xl bg-[var(--red)] text-white text-sm font-black">{answers[index] ? "ยืนยันการเปลี่ยนคำตอบ" : "ยืนยันคำตอบ"}</button></div>}
+            {answers[index] && <p className="mt-3 text-xs font-bold text-[var(--teal)]">บันทึกคำตอบแล้ว</p>}
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function QuizClient({ authPaths, user, isAdmin }: Props) {
-  const [levels, setLevels] = useState<Level[]>(hskLevels);
+  const [levels, setLevels] = useState<Level[]>([]);
   const [selectedLevelId, setSelectedLevelId] = useState<string>("hsk1");
   const [selectedExamId, setSelectedExamId] = useState("all");
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -61,10 +127,11 @@ export default function QuizClient({ authPaths, user, isAdmin }: Props) {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "offline">("idle");
 
   const activeLevel = useMemo(() => {
-    return levels.find((l) => l.id === selectedLevelId) || levels[0] || hskLevels[0];
+    return levels.find((l) => l.id === selectedLevelId) || levels[0];
   }, [levels, selectedLevelId]);
 
   const allQuestions: QuizItem[] = useMemo(() => {
+    if (!activeLevel) return [];
     return activeLevel.quizzes && activeLevel.quizzes.length > 0
       ? activeLevel.quizzes
       : [activeLevel.quiz];
@@ -85,6 +152,12 @@ export default function QuizClient({ authPaths, user, isAdmin }: Props) {
   }, [allQuestions, examSets, selectedExamId]);
 
   const currentQuestion = questionsList[questionIndex] || questionsList[0];
+  const sectionQuestions = useMemo(() => {
+    if (!currentQuestion) return [];
+    return questionsList
+      .map((question, index) => ({ question, index }))
+      .filter(({ question }) => question.documentId === currentQuestion.documentId && question.part === currentQuestion.part && question.section === currentQuestion.section);
+  }, [currentQuestion, questionsList]);
 
   const sectionAudioUrl = useMemo(() => {
     if (!currentQuestion || currentQuestion.part !== "listening") return "";
@@ -187,8 +260,20 @@ export default function QuizClient({ authPaths, user, isAdmin }: Props) {
   function handleChooseAnswer(choice: string) {
     if (isAnswerSubmitted) return;
     setSelectedAnswer(choice);
+  }
+
+  function handleSubmitAnswer() {
+    if (!selectedAnswer || isAnswerSubmitted) return;
     setIsAnswerSubmitted(true);
-    setAnswers((previous) => ({ ...previous, [questionIndex]: choice }));
+    setAnswers((previous) => ({ ...previous, [questionIndex]: selectedAnswer }));
+  }
+
+  function handleConfirmSectionAnswer(index: number, answer: string) {
+    setAnswers((previous) => ({ ...previous, [index]: answer }));
+    if (index === questionIndex) {
+      setSelectedAnswer(answer);
+      setIsAnswerSubmitted(true);
+    }
   }
 
   function handleNextQuestion() {
@@ -260,6 +345,10 @@ export default function QuizClient({ authPaths, user, isAdmin }: Props) {
     setExamStarted(true);
     setRemainingSeconds(30 * 60);
     setSaveStatus("idle");
+  }
+
+  if (!activeLevel) {
+    return <div className="app-page min-h-screen grid place-items-center text-sm font-bold text-[var(--muted)]">กำลังโหลดข้อสอบจากฐานข้อมูล...</div>;
   }
 
   return (
@@ -367,7 +456,7 @@ export default function QuizClient({ authPaths, user, isAdmin }: Props) {
                 <div className={`font-mono text-xl font-black ${remainingSeconds < 300 ? "text-red-300" : "text-amber-200"}`}>เวลาเหลือ {timeLabel}</div>
               </div>
               <div className="quiz-session-layout grid lg:grid-cols-[minmax(0,1fr)_210px] gap-4 items-start">
-              <div className="quiz-question-card p-6 sm:p-10 rounded-3xl bg-[var(--paper)] border border-[var(--line)] shadow-lg space-y-6">
+              {sectionQuestions.length > 1 ? <SectionQuestionList questions={sectionQuestions} startIndex={sectionQuestions[0]?.index ?? 0} answers={answers} audioUrl={sectionAudioUrl} onConfirm={handleConfirmSectionAnswer} /> : <div className="quiz-question-card p-6 sm:p-10 rounded-3xl bg-[var(--paper)] border border-[var(--line)] shadow-lg space-y-6">
               {/* Progress bar */}
               <div>
                 <div className="flex items-center justify-between text-xs font-bold text-[var(--muted)] mb-2">
@@ -425,6 +514,12 @@ export default function QuizClient({ authPaths, user, isAdmin }: Props) {
                 })}
               </div>
 
+              {!isAnswerSubmitted && selectedAnswer && (
+                <div className="flex justify-end pt-2">
+                  <button type="button" onClick={handleSubmitAnswer} className="px-6 py-3 rounded-xl bg-[var(--red)] text-white font-black shadow-md hover:bg-[#bd3d2f] transition-colors">ยืนยันคำตอบ</button>
+                </div>
+              )}
+
               {/* Feedback and Explanation */}
               {isAnswerSubmitted && <div className="p-4 rounded-xl border border-blue-200 bg-blue-50 text-blue-950 text-sm">บันทึกคำตอบแล้ว สามารถไปข้อถัดไปได้</div>}
               <div className="text-center text-[10px] tracking-widest text-[var(--muted)] pt-1">{currentQuestion.documentId ?? "H11329"} - {currentQuestion.questionNumber ?? questionIndex + 1}</div>
@@ -445,10 +540,10 @@ export default function QuizClient({ authPaths, user, isAdmin }: Props) {
                   </button>
                 </div>
               )}
-              </div>
+              </div>}
               <aside className="quiz-answer-sheet p-4 rounded-2xl bg-[var(--paper)] border border-[var(--line)] shadow-sm lg:sticky lg:top-4">
                 <div className="flex items-center justify-between mb-3"><strong className="text-sm">กระดาษคำตอบ</strong><span className="text-xs text-[var(--muted)]">{answeredCount}/{questionsList.length}</span></div>
-                <div className="grid grid-cols-5 gap-2">{questionsList.map((_, index) => <button key={index} type="button" onClick={() => { setQuestionIndex(index); setSelectedAnswer(answers[index] || ""); setIsAnswerSubmitted(Boolean(answers[index])); }} className={`aspect-square rounded-lg text-xs font-black border ${index === questionIndex ? "bg-[var(--ink)] text-white border-[var(--ink)]" : answers[index] ? "bg-teal-50 text-teal-900 border-teal-300" : "bg-white text-[var(--muted)] border-[var(--line)]"}`}>{index + 1}</button>)}</div>
+                <div className="grid grid-cols-5 gap-2">{questionsList.map((_, index) => <button key={index} type="button" onClick={() => { setQuestionIndex(index); setSelectedAnswer(answers[index] || ""); setIsAnswerSubmitted(false); }} className={`aspect-square rounded-lg text-xs font-black border ${index === questionIndex ? "bg-[var(--ink)] text-white border-[var(--ink)]" : answers[index] ? "bg-teal-50 text-teal-900 border-teal-300" : "bg-white text-[var(--muted)] border-[var(--line)]"}`}>{index + 1}</button>)}</div>
                 <div className="mt-4 space-y-2 text-xs text-[var(--muted)]"><p><span className="inline-block w-2.5 h-2.5 rounded-sm bg-teal-100 border border-teal-300 mr-2" />ตอบแล้ว</p><p><span className="inline-block w-2.5 h-2.5 rounded-sm bg-white border border-[var(--line)] mr-2" />ยังไม่ได้ตอบ</p></div>
                 <button type="button" onClick={() => void handleFinishExam()} disabled={isSubmittingExam} className="w-full mt-4 px-3 py-3 rounded-xl bg-[var(--red)] text-white text-sm font-black disabled:opacity-50">ส่งคำตอบทั้งหมด</button>
               </aside>
