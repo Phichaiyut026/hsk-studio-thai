@@ -82,7 +82,7 @@ export default function HomeClient({ authPaths, user, isAdmin }: Props) {
                 แพลตฟอร์มเรียนจีนสำหรับผู้เรียนไทย
               </div>
               <h1 className="text-4xl sm:text-6xl font-black text-[var(--ink)] tracking-tight leading-tight">
-                เรียน HSK ให้จำได้ ใช้เป็น และเห็นผลทุกวัน
+                เรียนภาษาจีนให้จำได้ ใช้เป็น และเห็นผลทุกวัน
               </h1>
               <p className="lead">
                 แยกหน้าเรียนรู้เป็นสัดส่วน: ฝึกบัตรคำพร้อมเสียงอ่าน
@@ -109,7 +109,7 @@ export default function HomeClient({ authPaths, user, isAdmin }: Props) {
                   คำศัพท์ประจำวันนี้
                 </span>
                 <span className="px-2.5 py-0.5 rounded-full bg-red-100 text-[var(--red)] text-xs font-bold">
-                  HSK
+                  ภาษาจีน
                 </span>
               </div>
 
@@ -165,7 +165,7 @@ export default function HomeClient({ authPaths, user, isAdmin }: Props) {
             />
           </div>
           <div className="teacher-copy">
-            <span className="teacher-eyebrow">ครูผู้สอนของ HSK Studio</span>
+            <span className="teacher-eyebrow">ครูผู้สอนภาษาจีน</span>
             <h2 id="teacher-heading">เรียนภาษาจีนกับครูผู้สอนที่พร้อมดูแลคุณ</h2>
             <p>
               พื้นที่แนะนำตัวและประสบการณ์ของครูผู้สอนจะเพิ่มเติมในส่วนนี้
@@ -201,7 +201,7 @@ export default function HomeClient({ authPaths, user, isAdmin }: Props) {
                 </h3>
                 <p className="text-xs text-[var(--muted)] leading-relaxed">
                   ฝึกเปิดบัตรคำแบบ 3D พลิกดูคำแปล ระบบสุ่มคำ และตารางค้นหาคำศัพท์
-                  HSK 1 - 4 พร้อมเสียงอ่านภาษาจีน
+                  คำศัพท์ภาษาจีนพร้อมเสียงอ่าน
                 </p>
               </div>
               <div className="mt-6 flex items-center text-xs font-black text-[var(--red)]">
@@ -306,7 +306,7 @@ export default function HomeClient({ authPaths, user, isAdmin }: Props) {
               เลือกระดับ
             </span>
             <h2 className="text-3xl font-black text-[var(--ink)] mt-1">
-              ระดับ HSK ที่เปิดให้เรียน
+              ระดับภาษาจีนที่เปิดให้เรียน
             </h2>
           </div>
 

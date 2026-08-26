@@ -29,7 +29,7 @@ export default function VocabularyGameClient() {
   const [questionIndex, setQuestionIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState(QUESTION_TIME);
   const [results, setResults] = useState<AnswerResult[]>([]);
-  const [levelTitle, setLevelTitle] = useState("HSK");
+  const [levelTitle, setLevelTitle] = useState("ภาษาจีน");
 
   const currentQuestion = questions[questionIndex];
   const score = useMemo(() => results.filter((result) => result.correct).length, [results]);
@@ -50,14 +50,14 @@ export default function VocabularyGameClient() {
         const safeSource = source.length ? source : fallbackLevel;
         const selectedWords = safeSource.flatMap((level) => level.vocabulary);
         const selectedLevel = safeSource.find((level) => level.id === levelId);
-        setLevelTitle(levelId === "all" ? "ทุกระดับ HSK" : selectedLevel?.title ?? levelId.toUpperCase());
+        setLevelTitle(levelId === "all" ? "ทุกระดับภาษาจีน" : selectedLevel?.title ?? levelId.toUpperCase());
         setQuestions(buildQuestions(selectedWords));
         setGameState("playing");
       })
       .catch(() => {
         if (ignore) return;
         const selectedWords = fallbackLevel.flatMap((level) => level.vocabulary);
-        setLevelTitle(levelId === "all" ? "ทุกระดับ HSK" : fallbackLevel[0]?.title ?? "HSK");
+        setLevelTitle(levelId === "all" ? "ทุกระดับภาษาจีน" : fallbackLevel[0]?.title ?? "ภาษาจีน");
         setQuestions(buildQuestions(selectedWords));
         setGameState("playing");
       });

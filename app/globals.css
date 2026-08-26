@@ -3336,7 +3336,8 @@ a {
   font-size: 0.68rem;
 }
 
-.admin-batch-question-list {
+.admin-batch-question-list,
+.admin-custom-choice-list {
   display: grid;
   gap: 12px;
   padding: 16px;
@@ -3345,7 +3346,8 @@ a {
   background: color-mix(in srgb, var(--paper) 75%, transparent);
 }
 
-.admin-batch-question {
+.admin-batch-question,
+.admin-custom-choice-row {
   display: grid;
   grid-template-columns: 80px minmax(120px, 180px) minmax(180px, 1fr) auto;
   align-items: end;
@@ -3355,7 +3357,8 @@ a {
 }
 
 @media (max-width: 720px) {
-  .admin-batch-question { grid-template-columns: 1fr; }
+  .admin-batch-question,
+  .admin-custom-choice-row { grid-template-columns: 1fr; }
 }
 
 .admin-exam-notice {

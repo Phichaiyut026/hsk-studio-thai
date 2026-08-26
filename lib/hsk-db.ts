@@ -31,6 +31,21 @@ export type SystemOverview = {
   };
 };
 
+export type StudyQuestion = {
+  id: string;
+  levelId: string;
+  prompt: string;
+  answer: string;
+  choices: string[];
+  documentId: string;
+  part: "listening" | "reading" | "writing";
+  section: string;
+  format: "choice" | "true-false" | "image-choice" | "matching" | "fill-blank";
+  questionNumber: number;
+  mediaUrl?: string;
+  imageUrl?: string;
+};
+
 let schemaReady: Promise<void> | null = null;
 
 export async function ensureHskSeedData() {
@@ -49,24 +64,6 @@ export async function ensureHskSeedData() {
     })),
   );
 
-  const questionRows = hskLevels.flatMap((level) =>
-    (level.quizzes && level.quizzes.length > 0 ? level.quizzes : [level.quiz]).map((question, index) => ({
-      id: question.id,
-      levelId: level.id,
-      prompt: question.prompt,
-      answer: question.answer,
-      choicesJson: JSON.stringify(question.choices),
-      position: index,
-      documentId: question.documentId ?? "H11329",
-      part: question.part ?? "reading",
-      section: question.section ?? "1",
-      format: question.format ?? "choice",
-      questionNumber: question.questionNumber ?? index + 1,
-      mediaUrl: question.mediaUrl ?? null,
-      imageUrl: question.imageUrl ?? null,
-    })),
-  );
-
   await d1.batch([
     ...vocabRows.map((word) =>
       d1
@@ -76,39 +73,6 @@ export async function ensureHskSeedData() {
           VALUES (?, ?, ?, ?, ?, ?, ?)`,
         )
         .bind(word.id, word.levelId, word.hanzi, word.pinyin, word.thai, word.example, word.position),
-    ),
-    ...questionRows.map((question) =>
-      d1
-        .prepare(
-          `INSERT OR IGNORE INTO quiz_questions
-          (id, level_id, prompt, answer, choices_json, position, document_id, part, section, format, question_number, media_url, image_url)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        )
-        .bind(
-          question.id,
-          question.levelId,
-          question.prompt,
-          question.answer,
-          question.choicesJson,
-          question.position,
-          question.documentId,
-          question.part,
-          question.section,
-          question.format,
-          question.questionNumber,
-          question.mediaUrl,
-          question.imageUrl,
-        ),
-    ),
-    ...questionRows.map((question) =>
-      d1.prepare(
-        `UPDATE quiz_questions
-         SET document_id = ?, part = ?, section = ?, format = ?, question_number = ?, media_url = ?, image_url = ?
-         WHERE id = ?`,
-      ).bind(
-        question.documentId, question.part, question.section, question.format,
-        question.questionNumber, question.mediaUrl, question.imageUrl, question.id,
-      ),
     ),
   ]);
 }
@@ -670,7 +634,24 @@ export async function getStudyData(sessionId: string) {
   const stats = await getQuizStats(sessionId);
   const progress = await getProgressStats({ sessionId });
 
-  const levels: Level[] = hskLevels.map((level) => {
+  const staticLevels = new Map(hskLevels.map((level) => [level.id, level]));
+  const levelIds = Array.from(new Set([
+    ...hskLevels.map((level) => level.id),
+    ...words.map((word) => word.levelId),
+    ...questions.map((question) => question.levelId),
+  ])).filter(Boolean);
+
+  const levels: Level[] = levelIds.map((levelId) => {
+    const level = staticLevels.get(levelId) ?? {
+      id: levelId,
+      title: levelId.toUpperCase(),
+      words: 0,
+      target: "ระดับที่สร้างจาก Admin",
+      color: "#22806b",
+      focus: "ชุดข้อสอบและคำศัพท์ที่เพิ่มเอง",
+      vocabulary: [],
+      lesson: { title: levelId.toUpperCase(), grammar: "", dialog: "" },
+    };
     const levelWords = words
       .filter((word) => word.levelId === level.id)
       .map((word) => ({
@@ -680,44 +661,35 @@ export async function getStudyData(sessionId: string) {
         thai: word.thai,
         example: word.example,
       }));
-    const levelQuestions = questions
-      .filter((item) => item.levelId === level.id)
-      .sort((left, right) =>
-        `${left.documentId}:${left.part}:${left.section}`.localeCompare(`${right.documentId}:${right.part}:${right.section}`) ||
-        left.questionNumber - right.questionNumber ||
-        left.position - right.position,
-      );
-    const quizzes = levelQuestions.length
-      ? levelQuestions.map((question) => ({
-          id: question.id,
-          prompt: question.prompt,
-          answer: question.answer,
-          choices: parseChoices(question.choicesJson, level.quiz.choices),
-          documentId: question.documentId,
-          part: question.part as "listening" | "reading" | "writing",
-          section: question.section,
-          format: question.format as "choice" | "true-false" | "image-choice" | "matching" | "fill-blank",
-          questionNumber: question.questionNumber,
-          mediaUrl: question.mediaUrl ?? undefined,
-          imageUrl: question.imageUrl ?? undefined,
-        }))
-      : level.quizzes ?? [level.quiz];
 
     return {
       ...level,
       vocabulary: levelWords,
-      quiz: quizzes[0] ?? {
-        ...level.quiz,
-        id: `empty-${level.id}`,
-        prompt: "",
-        answer: "",
-        choices: [],
-      },
-      quizzes,
     };
   });
 
-  return { levels, stats, progress };
+  const studyQuestions: StudyQuestion[] = questions
+    .sort((left, right) =>
+      `${left.levelId}:${left.documentId}:${left.part}:${left.section}`.localeCompare(`${right.levelId}:${right.documentId}:${right.part}:${right.section}`) ||
+      left.questionNumber - right.questionNumber ||
+      left.position - right.position,
+    )
+    .map((question) => ({
+      id: question.id,
+      levelId: question.levelId,
+      prompt: question.prompt,
+      answer: question.answer,
+      choices: parseChoices(question.choicesJson, []),
+      documentId: question.documentId,
+      part: question.part as "listening" | "reading" | "writing",
+      section: question.section,
+      format: question.format as "choice" | "true-false" | "image-choice" | "matching" | "fill-blank",
+      questionNumber: question.questionNumber,
+      mediaUrl: question.mediaUrl ?? undefined,
+      imageUrl: question.imageUrl ?? undefined,
+    }));
+
+  return { levels, questions: studyQuestions, stats, progress };
 }
 
 export async function getStudyDataForUser(userId: string) {
@@ -828,17 +800,26 @@ async function getProgressStats(scope: ProgressScope) {
     .prepare("SELECT level_id, COUNT(*) as total_words FROM vocabulary GROUP BY level_id")
     .all<{ level_id: string; total_words: number }>();
 
+  const staticLevels = new Map(hskLevels.map((level) => [level.id, level]));
+  const levelIds = Array.from(new Set([
+    ...hskLevels.map((level) => level.id),
+    ...levelRows.results.map((row) => row.level_id),
+    ...questionRows.results.map((row) => row.level_id),
+    ...vocabularyRows.results.map((row) => row.level_id),
+  ])).filter(Boolean);
+
   return {
-    levels: hskLevels.map((level) => {
-      const attempts = levelRows.results.find((row) => row.level_id === level.id);
-      const questionCount = questionRows.results.find((row) => row.level_id === level.id)?.total_questions ?? 0;
-      const wordCount = vocabularyRows.results.find((row) => row.level_id === level.id)?.total_words ?? level.vocabulary.length;
+    levels: levelIds.map((levelId) => {
+      const level = staticLevels.get(levelId);
+      const attempts = levelRows.results.find((row) => row.level_id === levelId);
+      const questionCount = questionRows.results.find((row) => row.level_id === levelId)?.total_questions ?? 0;
+      const wordCount = vocabularyRows.results.find((row) => row.level_id === levelId)?.total_words ?? level?.vocabulary.length ?? 0;
       const totalAttempts = Number(attempts?.total_attempts ?? 0);
       const correctAttempts = Number(attempts?.correct_attempts ?? 0);
       return {
-        levelId: level.id,
-        title: level.title,
-        color: level.color,
+        levelId,
+        title: level?.title ?? levelId.toUpperCase(),
+        color: level?.color ?? "#22806b",
         totalWords: Number(wordCount),
         totalQuestions: Number(questionCount),
         totalAttempts,

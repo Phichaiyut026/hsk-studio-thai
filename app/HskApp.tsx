@@ -3,11 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { dailyTasks, hskLevels, type Level } from "../lib/hsk-data";
 
-type QuizStats = {
-  totalAttempts: number;
-  correctAttempts: number;
-};
-
 type HskAppProps = {
   authPaths: {
     signIn: string;
@@ -34,10 +29,7 @@ export default function HskApp({ authPaths, user }: HskAppProps) {
   const [activeLevel, setActiveLevel] = useState(hskLevels[0]);
   const [flipped, setFlipped] = useState(false);
   const [cardIndex, setCardIndex] = useState(0);
-  const [selectedAnswer, setSelectedAnswer] = useState("");
   const [checkedTasks, setCheckedTasks] = useState<string[]>([]);
-  const [quizStats, setQuizStats] = useState<QuizStats | null>(null);
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "offline">("idle");
 
   const currentWord = activeLevel.vocabulary[cardIndex];
   const completion = Math.round((checkedTasks.length / dailyTasks.length) * 100);
@@ -61,15 +53,13 @@ export default function HskApp({ authPaths, user }: HskAppProps) {
         if (!response.ok) return;
         const data = (await response.json()) as {
           levels?: Level[];
-          stats?: QuizStats;
         };
         if (ignore || !data.levels?.length) return;
 
         setLevels(data.levels);
         setActiveLevel((current) => data.levels?.find((level) => level.id === current.id) ?? data.levels![0]);
-        setQuizStats(data.stats ?? null);
       } catch {
-        setSaveState("offline");
+        // Keep local fallback data if the database is unavailable.
       }
     }
 
@@ -83,44 +73,11 @@ export default function HskApp({ authPaths, user }: HskAppProps) {
     setActiveLevel(level);
     setCardIndex(0);
     setFlipped(false);
-    setSelectedAnswer("");
-    setSaveState("idle");
   }
 
   function nextCard() {
     setCardIndex((index) => (index + 1) % activeLevel.vocabulary.length);
     setFlipped(false);
-  }
-
-  async function chooseAnswer(choice: string) {
-    setSelectedAnswer(choice);
-
-    if (!user) {
-      setSaveState("offline");
-      return;
-    }
-
-    setSaveState("saving");
-
-    try {
-      const response = await fetch("/api/quiz-attempts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId: getSessionId(),
-          levelId: activeLevel.id,
-          questionId: activeLevel.quiz.id,
-          selectedAnswer: choice,
-        }),
-      });
-
-      if (!response.ok) throw new Error("Could not save quiz attempt");
-      const data = (await response.json()) as { stats?: QuizStats };
-      setQuizStats(data.stats ?? null);
-      setSaveState("saved");
-    } catch {
-      setSaveState("offline");
-    }
   }
 
   function toggleTask(task: string) {
@@ -152,7 +109,7 @@ export default function HskApp({ authPaths, user }: HskAppProps) {
         <div className="hero-grid">
           <div className="hero-copy">
             <p className="eyebrow">เว็บเรียนจีนสำหรับผู้เรียนไทย</p>
-            <h1>เรียน HSK ให้จำได้ ใช้เป็น และเห็นความคืบหน้าทุกวัน</h1>
+            <h1>เรียนภาษาจีนให้จำได้ ใช้เป็น และเห็นความคืบหน้าทุกวัน</h1>
             <p className="lead">
               เลือกระดับที่กำลังสอบ ฝึกคำศัพท์พร้อมประโยคจริง ทำ quiz สั้น ๆ
               แล้วจัดแผนอ่านแบบพอดีกับวันธรรมดา
@@ -241,44 +198,12 @@ export default function HskApp({ authPaths, user }: HskAppProps) {
       <section id="quiz" className="practice-strip">
         <div className="quiz-panel">
           <div className="panel-title">
-            <p className="eyebrow">Quiz</p>
-            <small>
-              {quizStats
-                ? `${quizStats.correctAttempts}/${quizStats.totalAttempts} ถูก`
-                : user
-                  ? "พร้อมบันทึก"
-                  : "เข้าสู่ระบบเพื่อบันทึก"}
-            </small>
+            <p className="eyebrow">แบบทดสอบ</p>
+            <small>{user ? "พร้อมบันทึกผล" : "เข้าสู่ระบบเพื่อบันทึก"}</small>
           </div>
-          <h2>{activeLevel.quiz.prompt}</h2>
-          <div className="choice-grid">
-            {activeLevel.quiz.choices.map((choice) => (
-              <button
-                className={`choice ${selectedAnswer === choice ? "selected" : ""}`}
-                key={choice}
-                onClick={() => chooseAnswer(choice)}
-                type="button"
-              >
-                {choice}
-              </button>
-            ))}
-          </div>
-          {selectedAnswer && (
-            <p className={selectedAnswer === activeLevel.quiz.answer ? "feedback good" : "feedback"}>
-              {selectedAnswer === activeLevel.quiz.answer
-                ? user
-                  ? "ถูกต้อง บันทึกผลแล้ว"
-                  : "ถูกต้อง เข้าสู่ระบบเพื่อเก็บสถิติ"
-                : `ยังไม่ใช่ คำตอบคือ ${activeLevel.quiz.answer}`}
-            </p>
-          )}
-          {saveState !== "idle" && (
-            <p className="save-status">
-              {saveState === "saving" && "กำลังบันทึกลง D1..."}
-              {saveState === "saved" && "บันทึกประวัติ quiz แล้ว"}
-              {saveState === "offline" && (user ? "ใช้ข้อมูลในหน้าเว็บก่อน เมื่อ D1 พร้อมจะบันทึกได้" : "เข้าสู่ระบบก่อนเพื่อบันทึกผลลงบัญชี")}
-            </p>
-          )}
+          <h2>ทำข้อสอบจากชุดที่สร้างในระบบ Admin</h2>
+          <p className="save-status">ข้อสอบถูกดึงจากฐานข้อมูลโดยตรง ไม่ใช้ข้อมูล mock ในไฟล์ระดับแล้ว</p>
+          <a className="primary-action" href={`/quiz?level=${activeLevel.id}`}>ไปหน้าแบบทดสอบ</a>
         </div>
 
         <div className="daily-panel">

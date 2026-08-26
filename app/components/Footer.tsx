@@ -14,7 +14,7 @@ export default function Footer({ isAdmin = false }: { isAdmin?: boolean }) {
             <span className="font-bold text-lg text-[var(--ink)]">HSK Studio</span>
           </div>
           <p className="max-w-md text-xs leading-relaxed">
-            แพลตฟอร์มฝึกภาษาจีนและเตรียมสอบ HSK (ระดับ 1 - 4)
+            แพลตฟอร์มฝึกภาษาจีนสำหรับผู้เรียนไทย
             ออกแบบมาเพื่อผู้เรียนไทยโดยเฉพาะ รวมคำศัพท์พร้อมพินอิน ตัวอย่างประโยค
             บทเรียนไวยากรณ์ ระบบออกเสียง และแบบทดสอบวัดระดับ
           </p>
@@ -25,7 +25,7 @@ export default function Footer({ isAdmin = false }: { isAdmin?: boolean }) {
           <ul className="space-y-2 text-xs font-semibold">
             <li>
               <a href="/vocabulary" className="hover:text-[var(--ink)] transition-colors">
-                บัตรคำ & คลังศัพท์ HSK
+                บัตรคำ & คลังศัพท์ภาษาจีน
               </a>
             </li>
             {isAdmin && <>

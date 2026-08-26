@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 type QuizItem = {
   id: string;
+  levelId: string;
   prompt: string;
   answer: string;
   choices: string[];
@@ -20,8 +21,6 @@ type QuizItem = {
 type Level = {
   id: string;
   title: string;
-  quiz: QuizItem;
-  quizzes?: QuizItem[];
 };
 
 type QuizStats = {
@@ -111,7 +110,8 @@ function SectionQuestionList({
 
 export default function QuizClient({ authPaths, user, isAdmin }: Props) {
   const [levels, setLevels] = useState<Level[]>([]);
-  const [selectedLevelId, setSelectedLevelId] = useState<string>("hsk1");
+  const [questions, setQuestions] = useState<QuizItem[]>([]);
+  const [selectedLevelId, setSelectedLevelId] = useState<string>("");
   const [selectedExamId, setSelectedExamId] = useState("all");
   const [questionIndex, setQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState("");
@@ -126,16 +126,21 @@ export default function QuizClient({ authPaths, user, isAdmin }: Props) {
   const [progress, setProgress] = useState<ProgressStats | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "offline">("idle");
 
+  const examLevels = useMemo(() => {
+    const levelIdsWithQuestions = new Set(questions.filter((question) => question.id && question.answer).map((question) => question.levelId));
+    return levels.filter((level) => {
+      return levelIdsWithQuestions.has(level.id);
+    });
+  }, [levels, questions]);
+
   const activeLevel = useMemo(() => {
-    return levels.find((l) => l.id === selectedLevelId) || levels[0];
-  }, [levels, selectedLevelId]);
+    return examLevels.find((l) => l.id === selectedLevelId) || examLevels[0];
+  }, [examLevels, selectedLevelId]);
 
   const allQuestions: QuizItem[] = useMemo(() => {
     if (!activeLevel) return [];
-    return activeLevel.quizzes && activeLevel.quizzes.length > 0
-      ? activeLevel.quizzes
-      : [activeLevel.quiz];
-  }, [activeLevel]);
+    return questions.filter((question) => question.levelId === activeLevel.id && question.id && question.answer);
+  }, [activeLevel, questions]);
 
   const examSets = useMemo(() => {
     const sets = new Map<string, QuizItem[]>();
@@ -150,6 +155,12 @@ export default function QuizClient({ authPaths, user, isAdmin }: Props) {
     if (selectedExamId === "all") return allQuestions;
     return examSets.find((exam) => exam.id === selectedExamId)?.questions ?? allQuestions;
   }, [allQuestions, examSets, selectedExamId]);
+
+  useEffect(() => {
+    if (selectedExamId !== "all" && !examSets.some((exam) => exam.id === selectedExamId)) {
+      setSelectedExamId("all");
+    }
+  }, [examSets, selectedExamId]);
 
   const currentQuestion = questionsList[questionIndex] || questionsList[0];
   const sectionQuestions = useMemo(() => {
@@ -205,11 +216,16 @@ export default function QuizClient({ authPaths, user, isAdmin }: Props) {
         const sessionId = getSessionId();
         const res = await fetch(`/api/study-data?sessionId=${encodeURIComponent(sessionId)}`);
         if (!res.ok) return;
-        const data = (await res.json()) as { levels?: Level[]; stats?: QuizStats; progress?: ProgressStats };
+        const data = (await res.json()) as { levels?: Level[]; questions?: QuizItem[]; stats?: QuizStats; progress?: ProgressStats };
+        const nextQuestions = data.questions?.filter((question) => question.id && question.answer) ?? [];
+        if (!ignore) setQuestions(nextQuestions);
         if (!ignore && data.levels && data.levels.length > 0) {
           setLevels(data.levels);
-          if (!data.levels.some((level) => level.id === selectedLevelId)) {
-            setSelectedLevelId(data.levels[0].id);
+          const availableExamLevel = data.levels.find((level) => nextQuestions.some((question) => question.levelId === level.id));
+          if (!selectedLevelId && availableExamLevel) {
+            setSelectedLevelId(availableExamLevel.id);
+          } else if (selectedLevelId && !nextQuestions.some((question) => question.levelId === selectedLevelId) && availableExamLevel) {
+            setSelectedLevelId(availableExamLevel.id);
           }
         }
         if (!ignore && data.stats) {
@@ -348,7 +364,21 @@ export default function QuizClient({ authPaths, user, isAdmin }: Props) {
   }
 
   if (!activeLevel) {
-    return <div className="app-page min-h-screen grid place-items-center text-sm font-bold text-[var(--muted)]">กำลังโหลดข้อสอบจากฐานข้อมูล...</div>;
+    return (
+      <div className="app-page quiz-page min-h-screen text-[var(--ink)] flex flex-col justify-between">
+        <div>
+          <Navbar authPaths={authPaths} user={user} isAdmin={isAdmin} />
+          <main className="quiz-main max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <section className="quiz-start-screen p-6 sm:p-10 rounded-3xl bg-[var(--paper)] border border-[var(--line)] shadow-lg text-center">
+              <div className="mx-auto w-16 h-16 rounded-full bg-[var(--ink)] text-white grid place-items-center text-2xl font-black">试</div>
+              <h1 className="text-3xl sm:text-4xl font-black text-[var(--ink)] mt-5">ยังไม่มีชุดข้อสอบ</h1>
+              <p className="text-[var(--muted)] text-base mt-2">เพิ่มข้อสอบจากหน้า Admin ก่อน แล้วระดับและชุดข้อสอบจะแสดงในหน้านี้อัตโนมัติ</p>
+            </section>
+          </main>
+        </div>
+        <Footer isAdmin={isAdmin} />
+      </div>
+    );
   }
 
   return (
@@ -390,7 +420,7 @@ export default function QuizClient({ authPaths, user, isAdmin }: Props) {
 
           {/* Level Tabs */}
           <div className="quiz-level-tabs flex flex-wrap gap-2 mb-8">
-            {levels.map((lvl) => {
+            {examLevels.map((lvl) => {
               const levelProgress = progress?.levels.find((item) => item.levelId === lvl.id);
               return (
               <button
@@ -403,7 +433,7 @@ export default function QuizClient({ authPaths, user, isAdmin }: Props) {
                     : "bg-[var(--paper)] text-[var(--ink)] border-[var(--line)] hover:border-black/30"
                 }`}
               >
-                <span>{lvl.title} Mock Exam</span>
+                <span>{lvl.title}</span>
                 {levelProgress && levelProgress.totalAttempts > 0 && (
                   <span className="ml-2 opacity-70">
                     {levelProgress.accuracyPercent}%
@@ -418,8 +448,8 @@ export default function QuizClient({ authPaths, user, isAdmin }: Props) {
               <div className="max-w-2xl mx-auto text-center space-y-6">
                 <div className="mx-auto w-16 h-16 rounded-full bg-[var(--ink)] text-white grid place-items-center text-2xl font-black">试</div>
                 <div>
-                  <span className="text-xs font-black tracking-widest text-[var(--red)] uppercase">Mock Examination</span>
-                  <h2 className="text-3xl sm:text-4xl font-black mt-2">{activeLevel.title} 模拟考试</h2>
+                  <span className="text-xs font-black tracking-widest text-[var(--red)] uppercase">HSK Examination</span>
+                  <h2 className="text-3xl sm:text-4xl font-black mt-2">{activeLevel.title} ชุดข้อสอบ</h2>
                   <p className="text-[var(--muted)] mt-3">จำลองบรรยากาศการสอบจริง ทำข้อสอบให้ครบก่อนส่ง และจะเห็นเฉลยพร้อมคะแนนหลังจบเท่านั้น</p>
                 </div>
                 <label className="quiz-exam-selector">
@@ -452,7 +482,7 @@ export default function QuizClient({ authPaths, user, isAdmin }: Props) {
             /* Quiz In Progress */
             <div className="quiz-session space-y-4">
               <div className="quiz-session-bar flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-xl bg-[var(--ink)] text-white shadow-md">
-                <div><span className="text-[10px] uppercase tracking-widest opacity-60">{currentQuestion.documentId ?? "H11329"} · Mock Examination</span><strong className="block text-lg">{activeLevel.title} · {currentQuestion.part === "listening" ? "听力 ฟัง" : currentQuestion.part === "writing" ? "书写 เขียน" : "阅读 อ่าน"} · ส่วนที่ {currentQuestion.section ?? "1"}</strong></div>
+                <div><span className="text-[10px] uppercase tracking-widest opacity-60">{currentQuestion.documentId ?? "H11329"} · HSK Examination</span><strong className="block text-lg">{activeLevel.title} · {currentQuestion.part === "listening" ? "听力 ฟัง" : currentQuestion.part === "writing" ? "书写 เขียน" : "阅读 อ่าน"} · ส่วนที่ {currentQuestion.section ?? "1"}</strong></div>
                 <div className={`font-mono text-xl font-black ${remainingSeconds < 300 ? "text-red-300" : "text-amber-200"}`}>เวลาเหลือ {timeLabel}</div>
               </div>
               <div className="quiz-session-layout grid lg:grid-cols-[minmax(0,1fr)_210px] gap-4 items-start">

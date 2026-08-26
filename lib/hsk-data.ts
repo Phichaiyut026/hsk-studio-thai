@@ -9,21 +9,6 @@ export type VocabWord = {
   category?: "คำนาม" | "คำกริยา" | "คำคุณศัพท์" | "คำเชื่อม" | "คำบอกเวลา" | "คำสรรพนาม" | "คำทักทาย" | "คำวิเศษณ์";
 };
 
-export type QuizItem = {
-  id: string;
-  prompt: string;
-  answer: string;
-  choices: string[];
-  explanation?: string;
-  documentId?: string;
-  part?: "listening" | "reading" | "writing";
-  section?: string;
-  format?: "choice" | "true-false" | "image-choice" | "matching" | "fill-blank";
-  questionNumber?: number;
-  mediaUrl?: string;
-  imageUrl?: string;
-};
-
 export type LessonData = {
   title: string;
   grammar: string;
@@ -42,8 +27,6 @@ export type Level = {
   focus: string;
   vocabulary: VocabWord[];
   lesson: LessonData;
-  quiz: QuizItem;
-  quizzes?: QuizItem[];
 };
 
 export const hskLevels: Level[] = [
@@ -172,64 +155,7 @@ export const hskLevels: Level[] = [
         { hanzi: "你叫什么名字？", pinyin: "Nǐ jiào shénme míngzi?", thai: "คุณชื่ออะไร?" },
         { hanzi: "谢谢你", pinyin: "Xièxie nǐ", thai: "ขอบคุณคุณนะ" },
       ],
-    },
-    quiz: {
-      id: "quiz-hsk1-friend",
-      prompt: "คำว่า 朋友 หมายถึงอะไร",
-      answer: "เพื่อน",
-      choices: ["เพื่อน", "หนังสือ", "ร้านอาหาร", "วันพรุ่งนี้"],
-      explanation: "朋友 (péngyou) แปลว่า เพื่อน เช่น 她是我的好朋友 (เธอคือเพื่อนสนิทของฉัน)",
-    },
-    quizzes: [
-      {
-        id: "quiz-hsk1-friend",
-        prompt: "คำว่า 朋友 หมายถึงอะไร",
-        answer: "เพื่อน",
-        choices: ["เพื่อน", "หนังสือ", "ร้านอาหาร", "วันพรุ่งนี้"],
-        explanation: "朋友 (péngyou) แปลว่า เพื่อน เช่น 她是我的好朋友",
-        documentId: "H11329",
-        part: "listening",
-        section: "1",
-        format: "true-false",
-        questionNumber: 1,
-      },
-      {
-        id: "quiz-hsk1-pinyin-xiexie",
-        prompt: "คำว่า '谢谢' (ขอบคุณ) มีพินอินตรงกับข้อใด",
-        answer: "xiè xie",
-        choices: ["xiè xie", "zài jiàn", "nǐ hǎo", "duì bu qǐ"],
-        explanation: "谢谢 อ่านว่า xiè xie แปลว่า ขอบคุณ",
-        documentId: "H11329",
-        part: "listening",
-        section: "2",
-        format: "image-choice",
-        questionNumber: 6,
-      },
-      {
-        id: "quiz-hsk1-sentence-eat",
-        prompt: "ประโยค '你吃饭了吗？' แปลว่าอะไร",
-        answer: "คุณกินข้าวหรือยัง?",
-        choices: ["คุณกินข้าวหรือยัง?", "คุณชอบกินอะไร?", "คุณไปไหนมา?", "คุณสบายดีไหม?"],
-        explanation: "吃饭 (chī fàn) แปลว่า กินข้าว, 吗 (ma) เป็นคำลงท้ายประโยคคำถาม",
-        documentId: "H11329",
-        part: "listening",
-        section: "3",
-        format: "matching",
-        questionNumber: 11,
-      },
-      {
-        id: "quiz-hsk1-number-price",
-        prompt: "ถ้าต้องการถามราคาสินค้า ควรถามด้วยประโยคใด",
-        answer: "这个多少钱？",
-        choices: ["这个多少钱？", "你在哪里？", "你是谁？", "今天几号？"],
-        explanation: "多少钱 (duōshao qián) แปลว่า ราคาเท่าไหร่",
-        documentId: "H11329",
-        part: "reading",
-        section: "1",
-        format: "choice",
-        questionNumber: 21,
-      },
-    ],
+    }
   },
   {
     id: "hsk2",
@@ -336,44 +262,7 @@ export const hskLevels: Level[] = [
         { hanzi: "我觉得...", pinyin: "wǒ juéde...", thai: "ฉันรู้สึกว่า / ฉันคิดว่า..." },
         { hanzi: "有点儿", pinyin: "yǒudiǎnr", thai: "นิดหน่อย / เล็กน้อย" },
       ],
-    },
-    quiz: {
-      id: "quiz-hsk2-yinwei",
-      prompt: "ประโยคใดใช้ 因为 ได้เหมาะสม",
-      answer: "因为我累，所以想休息。",
-      choices: ["因为我累，所以想休息。", "因为你好。", "因为三本书。", "因为在桌子。"],
-      explanation: "因为 (เพราะว่า) ใช้ขึ้นต้นประโยคเหตุผล และคู่กับ 所以 (จึง/ดังนั้น)",
-    },
-    quizzes: [
-      {
-        id: "quiz-hsk2-yinwei",
-        prompt: "ประโยคใดใช้ 因为 ได้เหมาะสม",
-        answer: "因为我累，所以想休息。",
-        choices: ["因为我累，所以想休息。", "因为你好。", "因为三本书。", "因为在桌子。"],
-        explanation: "因为 (เพราะว่า) ใช้ขึ้นต้นประโยคเหตุผล และคู่กับ 所以 (ดังนั้น)",
-      },
-      {
-        id: "quiz-hsk2-meaning-juede",
-        prompt: "คำว่า '觉得' (juéde) แปลว่าอะไร",
-        answer: "รู้สึกว่า / คิดว่า",
-        choices: ["รู้สึกว่า / คิดว่า", "วิ่งออกกำลังกาย", "ซื้อของขวัญ", "ทำความสะอาด"],
-        explanation: "觉得 แปลว่า รู้สึกว่า เช่น 我觉得很好 (ฉันรู้สึกว่าดีมาก)",
-      },
-      {
-        id: "quiz-hsk2-comparison",
-        prompt: "ประโยคเปรียบเทียบข้อใดถูกต้องตามหลักไวยากรณ์ (พี่ชายสูงกว่าฉัน)",
-        answer: "哥哥比我高",
-        choices: ["哥哥比我高", "哥哥高比我", "哥哥和我高比", "哥哥很比我高"],
-        explanation: "ไวยากรณ์การเปรียบเทียบในภาษาจีนคือ A + 比 + B + คำคุณศัพท์",
-      },
-      {
-        id: "quiz-hsk2-travel",
-        prompt: "คำว่า '旅游' (lǚyóu) หมายถึงกิจกรรมใด",
-        answer: "ท่องเที่ยว",
-        choices: ["ท่องเที่ยว", "ทำกับข้าว", "นอนหลับ", "อ่านหนังสือ"],
-        explanation: "旅游 (lǚyóu) แปลว่า การท่องเที่ยวหรือการเดินทางพักผ่อน",
-      },
-    ],
+    }
   },
   {
     id: "hsk3",
@@ -470,44 +359,7 @@ export const hskLevels: Level[] = [
         { hanzi: "如果有机会", pinyin: "rúguǒ yǒu jīhuì", thai: "ถ้าหากมีโอกาส" },
         { hanzi: "听说...", pinyin: "tīngshuō...", thai: "ได้ยินมาว่า..." },
       ],
-    },
-    quiz: {
-      id: "quiz-hsk3-complete",
-      prompt: "我已经完成作业了 สื่อความหมายใกล้เคียงข้อใด",
-      answer: "ฉันทำการบ้านเสร็จแล้ว",
-      choices: ["ฉันทำการบ้านเสร็จแล้ว", "ฉันยังไม่เริ่ม", "ฉันจะซื้อการบ้าน", "ฉันไม่รู้จักการบ้าน"],
-      explanation: "已经 (เรียบร้อยแล้ว) + 完成 (ทำเสร็จ) แปลว่า ทำเสร็จเรียบร้อยแล้ว",
-    },
-    quizzes: [
-      {
-        id: "quiz-hsk3-complete",
-        prompt: "我已经完成作业了 สื่อความหมายใกล้เคียงข้อใด",
-        answer: "ฉันทำการบ้านเสร็จแล้ว",
-        choices: ["ฉันทำการบ้านเสร็จแล้ว", "ฉันยังไม่เริ่ม", "ฉันจะซื้อการบ้าน", "ฉันไม่รู้จักการบ้าน"],
-        explanation: "已经 (เรียบร้อยแล้ว) + 完成 (ทำเสร็จ) แปลว่า ทำเสร็จเรียบร้อยแล้ว",
-      },
-      {
-        id: "quiz-hsk3-guo",
-        prompt: "ถ้าจะพูดว่า 'ฉันไม่เคยไปเมืองจีน' ควรพูดว่าอย่างไร",
-        answer: "我没去过中国",
-        choices: ["我没去过中国", "我不去过中国", "我去了中国", "我没有去中国了"],
-        explanation: "การปฏิเสธรูปประโยค 'เคยทำ (过)' ให้ใช้ 没 / 没有 วางหน้ากริยาเสมอ ห้ามใช้ 不",
-      },
-      {
-        id: "quiz-hsk3-renzhen",
-        prompt: "คำว่า '认真' (rènzhēn) มีความหมายตรงกับข้อใด",
-        answer: "ตั้งใจ / จริงจัง",
-        choices: ["ตั้งใจ / จริงจัง", "รวดเร็ว", "โกรธเคือง", "ขี้เกียจ"],
-        explanation: "认真 (rènzhēn) แปลว่า ตั้งใจ จริงจัง ละเอียดรอบคอบ",
-      },
-      {
-        id: "quiz-hsk3-turan",
-        prompt: "คำว่า '突然' (tūrán) ทำหน้าที่ขยายความหมายแบบใด",
-        answer: "เกิดขึ้นอย่างกะทันหัน / ทันใดนั้น",
-        choices: ["เกิดขึ้นอย่างกะทันหัน / ทันใดนั้น", "เกิดขึ้นเป็นประจำ", "ไม่เคยเกิดขึ้นเลย", "เกิดขึ้นอย่างช้าๆ"],
-        explanation: "突然 หมายถึง สิ่งที่เกิดขึ้นกะทันหันไม่ได้คาดคิด",
-      },
-    ],
+    }
   },
   {
     id: "hsk4",
@@ -594,44 +446,7 @@ export const hskLevels: Level[] = [
         { hanzi: "不仅...而且...", pinyin: "bùjǐn... érqiě...", thai: "ไม่เพียงแต่...แต่ยัง..." },
         { hanzi: "提高水平", pinyin: "tígāo shuǐpíng", thai: "ยกระดับความสามารถ" },
       ],
-    },
-    quiz: {
-      id: "quiz-hsk4-tigao",
-      prompt: "คำว่า 提高 ใช้กับอะไรได้เหมาะที่สุด",
-      answer: "提高听力水平",
-      choices: ["提高听力水平", "提高一杯水", "提高桌子下面", "提高昨天"],
-      explanation: "提高 (tígāo) นิยมใช้กับ 水平 (ระดับ/ทักษะ) เช่น 提高汉语水平",
-    },
-    quizzes: [
-      {
-        id: "quiz-hsk4-tigao",
-        prompt: "คำว่า 提高 ใช้กับอะไรได้เหมาะที่สุด",
-        answer: "提高听力水平",
-        choices: ["提高听力水平", "提高一杯水", "提高桌子下面", "提高昨天"],
-        explanation: "提高 (tígāo) นิยมใช้กับ 水平 (ระดับ/ทักษะ) เช่น 提高汉语水平",
-      },
-      {
-        id: "quiz-hsk4-duilaishuo",
-        prompt: "เติมคำในช่องว่าง: '______ 我来说，每天阅读很有帮助。'",
-        answer: "对",
-        choices: ["对", "给", "在", "向"],
-        explanation: "โครงสร้างไวยากรณ์คือ 对...来说 (สำหรับ...แล้ว)",
-      },
-      {
-        id: "quiz-hsk4-yali",
-        prompt: "คำว่า '压力' (yālì) หมายถึงข้อใด",
-        answer: "ความกดดัน / ความเครียด",
-        choices: ["ความกดดัน / ความเครียด", "ความสบายใจ", "ความโชคดี", "ความเงียบสงบ"],
-        explanation: "压力 แปลว่า ความกดดัน หรือ ความเครียดจากการทำงาน/สอบ",
-      },
-      {
-        id: "quiz-hsk4-shiying",
-        prompt: "ประโยค '适应新环境' สื่อถึงการทำสิ่งใด",
-        answer: "ปรับตัวเข้ากับสิ่งแวดล้อมใหม่",
-        choices: ["ปรับตัวเข้ากับสิ่งแวดล้อมใหม่", "ทำลายสิ่งแวดล้อมใหม่", "หนีออกจากที่เดิม", "ซื้อบ้านใหม่"],
-        explanation: "适应 (shìyìng) แปลว่า ปรับตัว, 新环境 คือ สิ่งแวดล้อมใหม่",
-      },
-    ],
+    }
   },
   {
     id: "hsk5",
@@ -645,14 +460,7 @@ export const hskLevels: Level[] = [
       title: "HSK 5 高级阅读",
       grammar: "โครงสร้างประโยคซับซ้อนและสำนวนระดับสูง",
       dialog: "数据同步后จะเพิ่มบทเรียนระดับ HSK 5 ในระบบ",
-    },
-    quiz: {
-      id: "quiz-hsk5-placeholder",
-      prompt: "HSK 5 question จะเพิ่มจาก Exam Builder",
-      answer: "待添加",
-      choices: ["待添加", "A", "B", "C"],
-    },
-  },
+    },  },
   {
     id: "hsk6",
     title: "HSK 6",
@@ -665,14 +473,7 @@ export const hskLevels: Level[] = [
       title: "HSK 6 高级理解",
       grammar: "การวิเคราะห์ข้อความและรูปประโยคระดับสูง",
       dialog: "数据同步后จะเพิ่มบทเรียนระดับ HSK 6 ในระบบ",
-    },
-    quiz: {
-      id: "quiz-hsk6-placeholder",
-      prompt: "HSK 6 question จะเพิ่มจาก Exam Builder",
-      answer: "待添加",
-      choices: ["待添加", "A", "B", "C"],
-    },
-  },
+    },  },
 ];
 
 export const dailyTasks = [

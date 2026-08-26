@@ -153,7 +153,7 @@ export default function StatsClient({ authPaths, user, isAdmin }: Props) {
                   ? accuracyPercent >= 80
                     ? "ยอดเยี่ยมมาก อยู่ในเกณฑ์ผ่านฉลุย"
                     : "ฝึกทำข้อสอบเพิ่มเติมเพื่อเพิ่มเปอร์เซ็นต์"
-                  : "เริ่มทำ Mock Exam เพื่อสร้างสถิติแรก"}
+                  : "เริ่มทำข้อสอบเพื่อสร้างสถิติแรก"}
               </p>
             </div>
 
@@ -196,7 +196,7 @@ export default function StatsClient({ authPaths, user, isAdmin }: Props) {
             {/* Card 4: Question bank */}
             <div className="p-6 rounded-3xl bg-[var(--paper)] border border-[var(--line)] shadow-xs">
               <span className="text-xs font-black uppercase text-[var(--muted)] tracking-wider">
-                คลังข้อสอบ Mock Exam
+                คลังชุดข้อสอบ
               </span>
               <div className="mt-3 flex items-baseline gap-2">
                 <span className="text-4xl font-black text-[var(--ink)]">
@@ -216,7 +216,7 @@ export default function StatsClient({ authPaths, user, isAdmin }: Props) {
                 <div>
                   <h2 className="text-2xl font-black text-[var(--ink)]">ภาพรวมการสอบ</h2>
                   <p className="text-sm text-[var(--muted)] mt-1">
-                    ระบบคำนวณจากคำตอบที่บันทึกจริงใน Mock Exam
+                    ระบบคำนวณจากคำตอบที่บันทึกจริงในชุดข้อสอบ
                   </p>
                 </div>
                 <span className="px-3 py-1 rounded-full bg-white border border-[var(--line)] text-xs font-black text-[var(--ink)]">
@@ -247,7 +247,7 @@ export default function StatsClient({ authPaths, user, isAdmin }: Props) {
                     <div className="mt-3 flex items-center justify-between text-xs font-semibold text-[var(--muted)]">
                       <span>ถูก {level.correctAttempts} / {level.totalAttempts} ครั้ง</span>
                       {isAdmin && <a href={`/quiz?level=${level.levelId}`} className="text-[var(--ink)] font-black hover:underline">
-                        ทำ Mock Exam
+                        ทำข้อสอบ
                       </a>}
                     </div>
                   </div>
@@ -264,7 +264,7 @@ export default function StatsClient({ authPaths, user, isAdmin }: Props) {
                 <p className="text-sm text-[var(--muted)] mt-2">
                   {weakestLevel
                     ? `ระดับนี้มีความถูกต้อง ${weakestLevel.accuracyPercent}% เหมาะกับการทบทวนรอบถัดไป`
-                    : "ยังไม่มีประวัติสอบ ลองทำ Mock Exam สักชุดเพื่อให้ระบบแนะนำได้แม่นขึ้น"}
+                    : "ยังไม่มีประวัติสอบ ลองทำข้อสอบสักชุดเพื่อให้ระบบแนะนำได้แม่นขึ้น"}
                 </p>
                 {isAdmin && <a
                   href={weakestLevel ? `/quiz?level=${weakestLevel.levelId}` : "/quiz"}
@@ -299,7 +299,7 @@ export default function StatsClient({ authPaths, user, isAdmin }: Props) {
                 </p>
               </div>
               {isAdmin && <a href="/quiz" className="text-sm font-black text-[var(--ink)] hover:underline">
-                ไปหน้า Mock Exam
+                ไปหน้าชุดข้อสอบ
               </a>}
             </div>
 
@@ -345,7 +345,7 @@ export default function StatsClient({ authPaths, user, isAdmin }: Props) {
               <div className="rounded-2xl border border-dashed border-[var(--line)] bg-white p-8 text-center">
                 <h3 className="font-black text-[var(--ink)]">ยังไม่มีประวัติการทำข้อสอบ</h3>
                 <p className="text-sm text-[var(--muted)] mt-2">
-                  เมื่อทำ Mock Exam แล้ว ประวัติคำตอบจะมาแสดงตรงนี้ทันที
+                  เมื่อทำข้อสอบแล้ว ประวัติคำตอบจะมาแสดงตรงนี้ทันที
                 </p>
               </div>
             )}

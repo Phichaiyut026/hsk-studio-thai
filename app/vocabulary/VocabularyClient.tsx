@@ -183,7 +183,7 @@ export default function VocabularyClient({ authPaths, user, isAdmin }: Props) {
                 คำศัพท์ & แฟลชการ์ด
               </div>
               <h1>
-                คลังคำศัพท์ HSK
+                คลังคำศัพท์ภาษาจีน
               </h1>
               <p>
                 เลือกระดับ แล้วเริ่มทบทวนคำศัพท์ ฟังเสียง หรือเล่นเกมของระดับนั้น
@@ -192,7 +192,7 @@ export default function VocabularyClient({ authPaths, user, isAdmin }: Props) {
           )}
 
           {!selectedLevelId && (
-            <section className="vocabulary-level-overview" aria-label="เลือกระดับ HSK">
+            <section className="vocabulary-level-overview" aria-label="เลือกระดับภาษาจีน">
               {isLoadingLevels ? (
                 <div className="vocabulary-empty-state">กำลังโหลดระดับคำศัพท์...</div>
               ) : levels.length > 0 ? (
@@ -240,7 +240,7 @@ export default function VocabularyClient({ authPaths, user, isAdmin }: Props) {
             <>
           <section className="vocabulary-level-detail">
             <button type="button" onClick={() => setSelectedLevelId("")} className="vocabulary-back-button">
-              ← เลือกระดับ HSK อื่น
+              ← เลือกระดับภาษาจีนอื่น
             </button>
             <div className="vocabulary-detail-heading">
               <div>
