@@ -4,7 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import SpeakButton from "./components/SpeakButton";
-import CrystalScene from "./components/CrystalScene";
+import dynamic from "next/dynamic";
+
+const CrystalScene = dynamic(() => import("./components/CrystalScene"), {
+  ssr: false,
+  loading: () => <div className="crystal-stage crystal-loading" aria-label="กำลังโหลดฉากสามมิติ" />,
+});
 import { hskLevels, dailyTasks, type Level } from "../lib/hsk-data";
 
 type Props = { authPaths: { signIn: string; signOut: string }; user: { displayName: string; email: string } | null; isAdmin: boolean };
