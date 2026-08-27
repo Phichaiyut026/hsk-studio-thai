@@ -13,7 +13,7 @@ const trueFalseChoices = ["ถูก", "ผิด"];
 
 function normalizeQuestionPayload(payload: {
   levelId?: string; documentId?: string; part?: string; section?: string; format?: string;
-  questionNumber?: number; prompt?: string; choices?: string[]; answer?: string; mediaUrl?: string; imageUrl?: string;
+  questionNumber?: number; isExample?: boolean; prompt?: string; choices?: string[]; answer?: string; mediaUrl?: string; imageUrl?: string;
 }) {
   const format = payload.format?.trim() ?? "";
   const choices = format === "true-false"
@@ -29,6 +29,7 @@ function normalizeQuestionPayload(payload: {
     section: payload.section?.trim() ?? "",
     format,
     questionNumber: Number(payload.questionNumber ?? 0),
+    isExample: Boolean(payload.isExample),
     prompt: payload.prompt?.trim() ?? "",
     choices,
     answer: payload.answer?.trim() ?? "",
@@ -38,7 +39,7 @@ function normalizeQuestionPayload(payload: {
 }
 
 function validateQuestion(values: ReturnType<typeof normalizeQuestionPayload>) {
-  if (!values.levelId || !values.documentId || !values.part || !values.section || !values.format || !values.questionNumber || !values.answer) {
+  if (!values.levelId || !values.documentId || !values.part || !values.section || !values.format || (!values.questionNumber && !values.isExample) || !values.answer) {
     return "กรุณากรอกระดับ ชุดข้อสอบ พาร์ท ส่วน เลขข้อ และคำตอบให้ครบ";
   }
   if (values.format !== "true-false" && !values.prompt && !values.mediaUrl && !values.imageUrl) {
@@ -70,7 +71,7 @@ export async function POST(request: Request) {
     if (!(await getAdmin())) return Response.json({ error: "Admin access required" }, { status: 403 });
     const payload = (await request.json()) as {
       levelId?: string; documentId?: string; part?: string; section?: string; format?: string;
-      questionNumber?: number; prompt?: string; choices?: string[]; answer?: string; mediaUrl?: string; imageUrl?: string;
+      questionNumber?: number; isExample?: boolean; prompt?: string; choices?: string[]; answer?: string; mediaUrl?: string; imageUrl?: string;
     };
     const values = normalizeQuestionPayload(payload);
     const error = validateQuestion(values);
@@ -84,7 +85,7 @@ export async function POST(request: Request) {
 async function parseQuestionPayload(request: Request) {
   const payload = (await request.json()) as {
     levelId?: string; documentId?: string; part?: string; section?: string; format?: string;
-    questionNumber?: number; prompt?: string; choices?: string[]; answer?: string; mediaUrl?: string; imageUrl?: string;
+    questionNumber?: number; isExample?: boolean; prompt?: string; choices?: string[]; answer?: string; mediaUrl?: string; imageUrl?: string;
   };
   return normalizeQuestionPayload(payload);
 }

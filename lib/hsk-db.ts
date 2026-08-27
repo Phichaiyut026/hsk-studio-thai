@@ -42,6 +42,7 @@ export type StudyQuestion = {
   section: string;
   format: "choice" | "true-false" | "image-choice" | "matching" | "fill-blank";
   questionNumber: number;
+  isExample?: boolean;
   mediaUrl?: string;
   imageUrl?: string;
 };
@@ -151,6 +152,7 @@ async function initializeHskSchema() {
         section text NOT NULL DEFAULT '1',
         format text NOT NULL DEFAULT 'choice',
         question_number integer NOT NULL DEFAULT 1,
+        is_example integer NOT NULL DEFAULT 0,
         media_url text,
         image_url text,
         created_at text DEFAULT CURRENT_TIMESTAMP NOT NULL
@@ -214,6 +216,7 @@ async function initializeHskSchema() {
     "ALTER TABLE quiz_questions ADD COLUMN section text NOT NULL DEFAULT '1'",
     "ALTER TABLE quiz_questions ADD COLUMN format text NOT NULL DEFAULT 'choice'",
     "ALTER TABLE quiz_questions ADD COLUMN question_number integer NOT NULL DEFAULT 1",
+    "ALTER TABLE quiz_questions ADD COLUMN is_example integer NOT NULL DEFAULT 0",
     "ALTER TABLE quiz_questions ADD COLUMN media_url text",
     "ALTER TABLE quiz_questions ADD COLUMN image_url text",
   ]) {
@@ -540,11 +543,11 @@ export async function listAdminAccessLogs(limit = 20): Promise<AdminAccessLog[]>
 export async function listQuizQuestions() {
   await ensureHskSchema();
   const result = await env.DB.prepare(
-    `SELECT id, level_id, prompt, answer, choices_json, position, document_id, part, section, format, question_number, media_url, image_url, created_at
+    `SELECT id, level_id, prompt, answer, choices_json, position, document_id, part, section, format, question_number, is_example, media_url, image_url, created_at
      FROM quiz_questions ORDER BY level_id, document_id, part, section, question_number, position`,
   ).all<{
     id: string; level_id: string; prompt: string; answer: string; choices_json: string; position: number;
-    document_id: string; part: string; section: string; format: string; question_number: number; media_url: string | null; image_url: string | null; created_at: string;
+    document_id: string; part: string; section: string; format: string; question_number: number; is_example: number; media_url: string | null; image_url: string | null; created_at: string;
   }>();
 
   return result.results.map((question) => ({
@@ -559,6 +562,7 @@ export async function listQuizQuestions() {
     section: question.section,
     format: question.format,
     questionNumber: question.question_number,
+    isExample: Boolean(question.is_example),
     mediaUrl: question.media_url ?? "",
     imageUrl: question.image_url ?? "",
     createdAt: question.created_at,
@@ -572,6 +576,7 @@ export async function addQuizQuestion(input: {
   section: string;
   format: string;
   questionNumber: number;
+  isExample?: boolean;
   prompt: string;
   choices: string[];
   answer: string;
@@ -585,24 +590,24 @@ export async function addQuizQuestion(input: {
   const id = `admin-quiz-${input.levelId}-${crypto.randomUUID()}`;
   await env.DB.prepare(
     `INSERT INTO quiz_questions
-      (id, level_id, prompt, answer, choices_json, position, document_id, part, section, format, question_number, media_url, image_url)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (id, level_id, prompt, answer, choices_json, position, document_id, part, section, format, question_number, is_example, media_url, image_url)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).bind(
     id, input.levelId, input.prompt, input.answer, JSON.stringify(input.choices),
     Number(positionRow?.next_position ?? 0), input.documentId, input.part, input.section,
-    input.format, input.questionNumber, input.mediaUrl?.trim() || null, input.imageUrl?.trim() || null,
+    input.format, input.questionNumber, input.isExample ? 1 : 0, input.mediaUrl?.trim() || null, input.imageUrl?.trim() || null,
   ).run();
   return { id };
 }
 
 export async function updateQuizQuestion(id: string, input: {
   levelId: string; documentId: string; part: string; section: string; format: string;
-  questionNumber: number; prompt: string; choices: string[]; answer: string; mediaUrl?: string; imageUrl?: string;
+  questionNumber: number; isExample?: boolean; prompt: string; choices: string[]; answer: string; mediaUrl?: string; imageUrl?: string;
 }) {
   await ensureHskSchema();
   await env.DB.prepare(
-    `UPDATE quiz_questions SET level_id = ?, document_id = ?, part = ?, section = ?, format = ?, question_number = ?, prompt = ?, choices_json = ?, answer = ?, media_url = ?, image_url = ? WHERE id = ?`,
-  ).bind(input.levelId, input.documentId, input.part, input.section, input.format, input.questionNumber, input.prompt, JSON.stringify(input.choices), input.answer, input.mediaUrl?.trim() || null, input.imageUrl?.trim() || null, id).run();
+    `UPDATE quiz_questions SET level_id = ?, document_id = ?, part = ?, section = ?, format = ?, question_number = ?, is_example = ?, prompt = ?, choices_json = ?, answer = ?, media_url = ?, image_url = ? WHERE id = ?`,
+  ).bind(input.levelId, input.documentId, input.part, input.section, input.format, input.questionNumber, input.isExample ? 1 : 0, input.prompt, JSON.stringify(input.choices), input.answer, input.mediaUrl?.trim() || null, input.imageUrl?.trim() || null, id).run();
   return { id };
 }
 
@@ -738,6 +743,7 @@ export async function getStudyData(sessionId: string) {
   });
 
   const studyQuestions: StudyQuestion[] = questions
+    .filter((question) => !question.isExample)
     .sort((left, right) =>
       `${left.levelId}:${left.documentId}:${left.part}:${left.section}`.localeCompare(`${right.levelId}:${right.documentId}:${right.part}:${right.section}`) ||
       left.questionNumber - right.questionNumber ||
@@ -754,6 +760,7 @@ export async function getStudyData(sessionId: string) {
       section: question.section,
       format: question.format as "choice" | "true-false" | "image-choice" | "matching" | "fill-blank",
       questionNumber: question.questionNumber,
+      isExample: question.isExample,
       mediaUrl: question.mediaUrl ?? undefined,
       imageUrl: question.imageUrl ?? undefined,
     }));

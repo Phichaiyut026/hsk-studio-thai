@@ -14,6 +14,7 @@ type QuizItem = {
   section?: string;
   format?: "choice" | "true-false" | "image-choice" | "matching" | "fill-blank";
   questionNumber?: number;
+  isExample?: boolean;
   mediaUrl?: string;
   imageUrl?: string;
 };

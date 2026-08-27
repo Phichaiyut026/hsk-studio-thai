@@ -4068,6 +4068,82 @@ a {
   font-weight: 800;
 }
 
+.admin-batch-exam-builder {
+  display: grid;
+  gap: 18px;
+  grid-column: 1 / -1;
+}
+
+.admin-batch-help {
+  margin: 0;
+  color: var(--admin-dark-muted);
+}
+
+.admin-batch-exam-builder > label {
+  display: grid;
+  gap: 8px;
+  font-weight: 800;
+}
+
+.admin-batch-exam-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-batch-exam-row {
+  display: grid;
+  grid-template-columns: 110px minmax(180px, 1fr) minmax(220px, 1.5fr) 150px;
+  align-items: end;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(85, 240, 223, 0.2);
+  border-radius: 10px;
+  background: rgba(8, 24, 29, 0.72);
+}
+
+.admin-batch-exam-row > strong {
+  color: var(--admin-dark-cyan);
+}
+
+.admin-batch-choice-fields {
+  display: contents;
+}
+
+.admin-batch-choice-fields > button {
+  align-self: end;
+}
+
+.admin-batch-exam-row label {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.admin-batch-exam-row input,
+.admin-batch-exam-row select,
+.admin-batch-exam-row textarea {
+  width: 100%;
+  border: 1px solid rgba(85, 240, 223, 0.2);
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: rgba(3, 14, 19, 0.76);
+  color: var(--admin-dark-ink);
+  font: inherit;
+}
+
+@media (max-width: 900px) {
+  .admin-batch-exam-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .admin-batch-exam-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .admin-toast {
   border-color: rgba(85, 240, 223, 0.36);
   background: rgba(6, 22, 28, 0.92);
