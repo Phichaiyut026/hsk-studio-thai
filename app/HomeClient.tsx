@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import SpeakButton from "./components/SpeakButton";
+import Hanzi3DBackground from "./components/Hanzi3DBackground";
 import { hskLevels, dailyTasks, type Level } from "../lib/hsk-data";
 
 type Props = {
@@ -75,8 +76,9 @@ export default function HomeClient({ authPaths, user, isAdmin }: Props) {
         <Navbar authPaths={authPaths} user={user} isAdmin={isAdmin} />
 
         {/* Hero Section */}
-        <section className="hero">
-          <div className="hero-grid">
+        <section className="hero relative overflow-hidden">
+          <Hanzi3DBackground />
+          <div className="hero-grid relative z-10">
             <div className="hero-copy">
               <div className="hero-kicker inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-100/70 text-[var(--red)] text-xs font-bold uppercase tracking-wider mb-4">
                 แพลตฟอร์มเรียนจีนสำหรับผู้เรียนไทย
@@ -103,54 +105,71 @@ export default function HomeClient({ authPaths, user, isAdmin }: Props) {
             </div>
 
             {/* Word of the Day Focus Box */}
-            <div className="study-board">
-              <div className="board-header">
-                <span className="text-xs uppercase tracking-wider font-bold">
-                  คำศัพท์ประจำวันนี้
-                </span>
-                <span className="px-2.5 py-0.5 rounded-full bg-red-100 text-[var(--red)] text-xs font-bold">
-                  ภาษาจีน
-                </span>
+            <div 
+              className="study-board relative overflow-hidden shadow-2xl rounded-[2rem]" 
+              style={{ backgroundColor: '#f7f3ec' }}
+            >
+              {/* Cute 3D Background Image */}
+              <div className="absolute inset-0 z-0">
+                <img 
+                  src="/cute_flashcard.webp" 
+                  className="w-full h-full object-cover opacity-60 mix-blend-multiply" 
+                  alt="" 
+                  aria-hidden="true" 
+                  decoding="async" 
+                />
+                <div className="absolute inset-0 bg-gradient-to-b from-[#f7f3ec]/40 via-[#f7f3ec]/70 to-[#f7f3ec]"></div>
               </div>
 
-              <div className="hanzi-focus">{wordOfTheDay.hanzi}</div>
-
-              <div className="tone-row flex items-center justify-between">
-                <div>
-                  <span className="text-xl font-black text-[var(--ink)] block">
-                    {wordOfTheDay.pinyin}
+              <div className="relative z-10 p-2">
+                <div className="board-header">
+                  <span className="text-xs uppercase tracking-wider font-bold text-[var(--ink)] opacity-80">
+                    คำศัพท์ประจำวันนี้
                   </span>
-                  <span className="text-sm font-bold text-[var(--teal)]">
-                    {wordOfTheDay.thai}
+                  <span className="px-3 py-1 rounded-full bg-red-100/80 text-[var(--red)] text-xs font-bold border border-red-200/50">
+                    ภาษาจีน
                   </span>
                 </div>
-                <SpeakButton text={wordOfTheDay.hanzi} label="ฟังเสียง" />
-              </div>
 
-              {/* Example sentence preview */}
-              <div className="mt-4 p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 text-xs">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-bold text-amber-900">ตัวอย่าง:</span>
-                  <SpeakButton
-                    text={wordOfTheDay.example}
-                    label="ฟังประโยค"
-                    className="p-1 text-[10px]"
-                  />
+                <div className="hanzi-focus text-[var(--ink)] drop-shadow-md">{wordOfTheDay.hanzi}</div>
+
+                <div className="tone-row flex items-center justify-between p-2">
+                  <div>
+                    <span className="text-2xl font-black text-[var(--ink)] block drop-shadow-sm">
+                      {wordOfTheDay.pinyin}
+                    </span>
+                    <span className="text-base font-bold text-[var(--teal)] drop-shadow-sm">
+                      {wordOfTheDay.thai}
+                    </span>
+                  </div>
+                  <SpeakButton text={wordOfTheDay.hanzi} label="ฟังเสียง" />
                 </div>
-                <p className="font-bold text-amber-950">{wordOfTheDay.example}</p>
-                {wordOfTheDay.exampleThai && (
-                  <p className="text-amber-800/80 mt-0.5">
-                    {wordOfTheDay.exampleThai}
-                  </p>
-                )}
-              </div>
 
-              {/* Progress Ring */}
-              <div className="mt-4 flex items-center justify-between pt-3 border-t border-[var(--line)] text-xs font-bold text-[var(--muted)]">
-                <span>ความคืบหน้าภารกิจวันนี้</span>
-                <span className="text-[var(--teal)] font-black">
-                  {checkedTasks.length}/{dailyTasks.length} ({completion}%)
-                </span>
+                {/* Example sentence preview */}
+                <div className="mt-2 p-2 text-xs">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-bold text-[var(--ink)] opacity-80 drop-shadow-sm">ตัวอย่าง:</span>
+                    <SpeakButton
+                      text={wordOfTheDay.example}
+                      label="ฟังประโยค"
+                      className="p-1 text-[10px]"
+                    />
+                  </div>
+                  <p className="font-bold text-[var(--ink)] text-sm leading-relaxed drop-shadow-sm">{wordOfTheDay.example}</p>
+                  {wordOfTheDay.exampleThai && (
+                    <p className="text-[var(--muted)] mt-1 font-medium drop-shadow-sm">
+                      {wordOfTheDay.exampleThai}
+                    </p>
+                  )}
+                </div>
+
+                {/* Progress Ring */}
+                <div className="mt-4 flex items-center justify-between pt-3 border-t border-[var(--line)] text-xs font-bold text-[var(--muted)]">
+                  <span>ความคืบหน้าภารกิจวันนี้</span>
+                  <span className="text-[var(--teal)] font-black">
+                    {checkedTasks.length}/{dailyTasks.length} ({completion}%)
+                  </span>
+                </div>
               </div>
             </div>
           </div>

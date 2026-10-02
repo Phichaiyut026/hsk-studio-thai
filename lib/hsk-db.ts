@@ -223,6 +223,14 @@ async function initializeHskSchema() {
     try { await d1.prepare(statement).run(); } catch { /* Existing databases may already have this column. */ }
   }
 
+  // Older rows for HSK 2-6 inherited the HSK 1 default document ID; give each its own
+  // H{level}1329 set. One idempotent statement that is a no-op once the data is fixed.
+  await d1
+    .prepare(
+      "UPDATE quiz_questions SET document_id = 'H' || substr(level_id, 4) || '1329' WHERE document_id = 'H11329' AND level_id IN ('hsk2', 'hsk3', 'hsk4', 'hsk5', 'hsk6')",
+    )
+    .run();
+
   await d1.batch([
     d1.prepare(
       "CREATE INDEX IF NOT EXISTS idx_quiz_attempts_user_created ON quiz_attempts (user_id, created_at)",
@@ -742,8 +750,8 @@ export async function getStudyData(sessionId: string) {
     };
   });
 
+  // Examples (例如) are sent too so the quiz can print them like the paper exam; the client never scores them.
   const studyQuestions: StudyQuestion[] = questions
-    .filter((question) => !question.isExample)
     .sort((left, right) =>
       `${left.levelId}:${left.documentId}:${left.part}:${left.section}`.localeCompare(`${right.levelId}:${right.documentId}:${right.part}:${right.section}`) ||
       left.questionNumber - right.questionNumber ||

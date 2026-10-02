@@ -70,7 +70,7 @@ export default function VocabularyClient({ authPaths, user, isAdmin }: Props) {
 
     let frame = 0;
     function handlePointerMove(event: PointerEvent) {
-      if (frame) return;
+      if (frame || !page) return;
       frame = window.requestAnimationFrame(() => {
         page.style.setProperty("--cursor-x", `${event.clientX}px`);
         page.style.setProperty("--cursor-y", `${event.clientY}px`);
@@ -93,6 +93,17 @@ export default function VocabularyClient({ authPaths, user, isAdmin }: Props) {
     return currentLevel?.vocabulary ?? [];
   }, [currentLevel]);
 
+  // Random deck order, reshuffled whenever the level changes. Only flashcards use it;
+  // the list view keeps the curriculum order so pagination stays stable.
+  const flashcardRank = useMemo(() => {
+    const ids = wordsForLevel.map((word) => word.id);
+    for (let i = ids.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [ids[i], ids[j]] = [ids[j], ids[i]];
+    }
+    return new Map(ids.map((id, index) => [id, index]));
+  }, [wordsForLevel]);
+
   // Filtered words for list view and flashcard view
   const filteredWords = useMemo(() => {
     return wordsForLevel.filter((w) => {
@@ -109,15 +120,16 @@ export default function VocabularyClient({ authPaths, user, isAdmin }: Props) {
     });
   }, [wordsForLevel, searchQuery, selectedCategory]);
 
+  const flashcardWords = useMemo(() => {
+    return [...filteredWords].sort((a, b) => (flashcardRank.get(a.id) ?? 0) - (flashcardRank.get(b.id) ?? 0));
+  }, [filteredWords, flashcardRank]);
+
   const listPageSize = 36;
   const listTotalPages = Math.max(1, Math.ceil(filteredWords.length / listPageSize));
   const visibleWords = filteredWords.slice((listPage - 1) * listPageSize, listPage * listPageSize);
 
   useEffect(() => {
     setListPage(1);
-  }, [selectedLevelId, searchQuery, selectedCategory]);
-
-  useEffect(() => {
     setCardIndex(0);
     setFlipped(false);
   }, [selectedLevelId, searchQuery, selectedCategory]);
@@ -126,17 +138,17 @@ export default function VocabularyClient({ authPaths, user, isAdmin }: Props) {
     if (listPage > listTotalPages) setListPage(listTotalPages);
   }, [listPage, listTotalPages]);
 
-  const activeWord: VocabWord | undefined = filteredWords[cardIndex] || filteredWords[0];
+  const activeWord: VocabWord | undefined = flashcardWords[cardIndex] || flashcardWords[0];
 
   function handleNextCard() {
-    if (filteredWords.length === 0) return;
-    setCardIndex((prev) => (prev + 1) % filteredWords.length);
+    if (flashcardWords.length === 0) return;
+    setCardIndex((prev) => (prev + 1) % flashcardWords.length);
     setFlipped(false);
   }
 
   function handleShuffle() {
-    if (filteredWords.length <= 1) return;
-    const randomIndex = Math.floor(Math.random() * filteredWords.length);
+    if (flashcardWords.length <= 1) return;
+    const randomIndex = Math.floor(Math.random() * flashcardWords.length);
     setCardIndex(randomIndex);
     setFlipped(false);
   }
@@ -194,7 +206,16 @@ export default function VocabularyClient({ authPaths, user, isAdmin }: Props) {
           {!selectedLevelId && (
             <section className="vocabulary-level-overview" aria-label="เลือกระดับภาษาจีน">
               {isLoadingLevels ? (
-                <div className="vocabulary-empty-state">กำลังโหลดระดับคำศัพท์...</div>
+                Array.from({ length: 6 }).map((_, idx) => (
+                  <div key={idx} className="vocabulary-level-choice" style={{ cursor: "default", border: "none", background: "var(--surface)", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+                    <span className="vocabulary-level-orb animate-pulse" style={{ background: "#e2e8f0" }} aria-hidden="true" />
+                    <span className="vocabulary-level-main" style={{ gap: "8px" }}>
+                      <span className="animate-pulse" style={{ display: "block", height: "12px", width: "60px", background: "#e2e8f0", borderRadius: "4px" }} />
+                      <span className="animate-pulse" style={{ display: "block", height: "20px", width: "100px", background: "#e2e8f0", borderRadius: "4px" }} />
+                      <span className="animate-pulse" style={{ display: "block", height: "14px", width: "140px", background: "#e2e8f0", borderRadius: "4px" }} />
+                    </span>
+                  </div>
+                ))
               ) : levels.length > 0 ? (
                 levels.map((lvl, index) => {
                   const masteredInLevel = lvl.vocabulary.filter((word) => masteredWords.includes(word.id)).length;
@@ -338,12 +359,12 @@ export default function VocabularyClient({ authPaths, user, isAdmin }: Props) {
           {/* MODE 1: FLASHCARD VIEW */}
           {mode === "flashcard" && (
             <div className="max-w-2xl mx-auto">
-              {filteredWords.length > 0 && activeWord ? (
+              {flashcardWords.length > 0 && activeWord ? (
                 <div>
                   {/* Card status info */}
                   <div className="flex items-center justify-between text-xs font-bold text-[var(--muted)] mb-3 px-1">
                     <span>
-                      คำที่ {cardIndex + 1} จากทั้งหมด {filteredWords.length} คำ
+                      คำที่ {cardIndex + 1} จากทั้งหมด {flashcardWords.length} คำ
                     </span>
                     <div className="flex items-center gap-2">
                       {activeWord.category && (

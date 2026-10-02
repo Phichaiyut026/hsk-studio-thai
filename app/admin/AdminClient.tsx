@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
+import ExamSectionBuilder from "./ExamSectionBuilder";
+import { ExamSectionPaper, type ExamQuestion } from "../components/exam/ExamPaper";
+import { getLevelSpec, getSectionSpec, partNames, sectionTitleZh, type ExamPart } from "../../lib/hsk-exam-format";
 
 type AdminUser = {
   userId: string;
@@ -61,26 +64,6 @@ type AdminBootstrap = {
   overview: SystemOverview;
   users: AdminUser[];
 };
-
-type ListeningBatchRow = {
-  isExample: boolean;
-  prompt: string;
-  answer: string;
-  imageFiles: Array<File | null>;
-  choices: string[];
-};
-
-function createListeningBatchRows(section: string): ListeningBatchRow[] {
-  const imageCount = section === "1" ? 1 : section === "2" ? 3 : section === "3" ? 6 : 0;
-  const choiceCount = section === "4" ? 3 : imageCount;
-  return Array.from({ length: 6 }, (_, index) => ({
-    isExample: index === 0,
-    prompt: "",
-    answer: "",
-    imageFiles: Array.from({ length: imageCount }, () => null),
-    choices: Array.from({ length: choiceCount }, (_, choiceIndex) => section === "4" ? "" : String.fromCharCode(65 + choiceIndex)),
-  }));
-}
 
 async function fetchJsonWithRetry<T>(url: string, options?: RequestInit, attempts = 3): Promise<T | null> {
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -380,17 +363,23 @@ function ExamsPanel({ questions, setMessage, onSaved }: { questions: AdminQuesti
   const [saving, setSaving] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [audioFile, setAudioFile] = useState<File | null>(null);
-  const [batchAudioFile, setBatchAudioFile] = useState<File | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [choiceImageFiles, setChoiceImageFiles] = useState<Array<File | null>>(["", ""].map(() => null));
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [form, setForm] = useState({ levelId: "", documentId: "", part: "", section: "", format: "choice", questionNumber: "1", isExample: false, prompt: "", choices: ["", ""], answer: "", mediaUrl: "", imageUrl: "" });
-  const [batchRows, setBatchRows] = useState<ListeningBatchRow[]>(() => createListeningBatchRows("1"));
+  const [entryMode, setEntryMode] = useState<"section" | "single">("section");
+  const [previewKey, setPreviewKey] = useState("");
   const update = (field: string, value: string) => setForm((current) => ({ ...current, [field]: value }));
   const updateChoice = (index: number, value: string) => setForm((current) => ({ ...current, choices: current.choices.map((choice, choiceIndex) => choiceIndex === index ? value : choice) }));
   
-  const existingLevels = Array.from(new Set(questions.map((question) => question.levelId).filter(Boolean))).sort();
-  const existingDocuments = Array.from(new Set(questions.map((question) => question.documentId).filter(Boolean))).sort();
+  const existingDocuments = Array.from(
+    new Set(
+      questions
+        .filter((question) => !form.levelId || question.levelId === form.levelId)
+        .map((question) => question.documentId)
+        .filter(Boolean),
+    ),
+  ).sort();
   const needsChoices = ["choice", "image-choice", "matching"].includes(form.format);
   const usesChoiceImages = ["image-choice", "matching"].includes(form.format);
   const answerChoices = form.format === "true-false" ? ["ถูก", "ผิด"] : form.choices.filter(Boolean);
@@ -430,81 +419,6 @@ function ExamsPanel({ questions, setMessage, onSaved }: { questions: AdminQuesti
     setChoiceImageFiles((current) => format === "true-false" ? [] : current.length ? current : ["", ""].map(() => null));
   }
 
-  function updateBatchRow(index: number, field: "prompt" | "answer", value: string) {
-    setBatchRows((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, [field]: value } : row));
-  }
-
-  function resetBatchRows() {
-    setBatchRows(createListeningBatchRows(form.section));
-    setBatchAudioFile(null);
-  }
-
-  async function createHsk1ListeningPart1Batch() {
-    setSaving(true);
-    setMessage("กำลังบันทึกข้อสอบ 6 รายการ...");
-    if (!form.documentId.trim()) {
-      setMessage("กรุณากรอกชื่อชุดข้อสอบก่อน");
-      setSaving(false);
-      return;
-    }
-    if (!batchAudioFile) {
-      setMessage("กรุณาแนบไฟล์เสียงที่ครอบคลุมส่วนนี้ก่อน");
-      setSaving(false);
-      return;
-    }
-    let sharedAudioUrl = "";
-    {
-      const audioData = new FormData();
-      audioData.append("file", batchAudioFile);
-      const audioResponse = await fetch("/api/admin/media", { method: "POST", body: audioData });
-      const audioResult = (await audioResponse.json().catch(() => ({}))) as { mediaUrl?: string; error?: string };
-      if (!audioResponse.ok || !audioResult.mediaUrl) {
-        setMessage(audioResult.error ?? "อัปโหลดไฟล์เสียงไม่สำเร็จ");
-        setSaving(false);
-        return;
-      }
-      sharedAudioUrl = audioResult.mediaUrl;
-    }
-    for (let index = 0; index < batchRows.length; index += 1) {
-      const row = batchRows[index];
-      if (!row.answer || (form.section !== "4" && row.imageFiles.some((file) => !file))) {
-        setMessage(`กรุณากรอกภาพและคำตอบของ${row.isExample ? "ตัวอย่าง" : `ข้อ ${index}`}`);
-        setSaving(false);
-        return;
-      }
-      const imageUrls: string[] = [];
-      for (const imageFile of row.imageFiles) {
-        if (!imageFile) continue;
-        const uploadData = new FormData();
-        uploadData.append("file", imageFile);
-        const uploadResponse = await fetch("/api/admin/media", { method: "POST", body: uploadData });
-        const uploadResult = (await uploadResponse.json().catch(() => ({}))) as { mediaUrl?: string; error?: string };
-        if (!uploadResponse.ok || !uploadResult.mediaUrl) {
-          setMessage(uploadResult.error ?? `อัปโหลดรูป${row.isExample ? "ตัวอย่าง" : `ข้อ ${index}`} ไม่สำเร็จ`);
-          setSaving(false);
-          return;
-        }
-        imageUrls.push(uploadResult.mediaUrl);
-      }
-      const isImageSection = form.section === "2" || form.section === "3";
-      const response = await fetch("/api/admin/exams", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ levelId: "hsk1", documentId: form.documentId, part: "listening", section: form.section, format: form.format, questionNumber: row.isExample ? 0 : index, isExample: row.isExample, prompt: row.prompt, choices: isImageSection || form.section === "4" ? row.choices : [], answer: row.answer, mediaUrl: sharedAudioUrl, imageUrl: form.section === "1" ? imageUrls[0] ?? "" : imageUrls.length ? JSON.stringify(imageUrls) : "" }),
-      });
-      if (!response.ok) {
-        const data = (await response.json().catch(() => ({}))) as { error?: string };
-        setMessage(data.error ?? `บันทึก${row.isExample ? "ตัวอย่าง" : `ข้อ ${index}`} ไม่สำเร็จ`);
-        setSaving(false);
-        return;
-      }
-    }
-    resetBatchRows();
-    await onSaved();
-    setMessage("บันทึกตัวอย่างและข้อสอบ HSK 1 ส่วนที่ 1 ครบ 6 รายการแล้ว");
-    setSaving(false);
-  }
-
   function addChoice() {
     setForm((current) => ({ ...current, choices: [...current.choices, ""] }));
     setChoiceImageFiles((current) => [...current, null]);
@@ -517,6 +431,8 @@ function ExamsPanel({ questions, setMessage, onSaved }: { questions: AdminQuesti
 
   async function createQuestion(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    // The section builder saves through its own button; ignore Enter-key submits from its inputs.
+    if (getSectionSpec(form.levelId, form.part, form.section) && !editingQuestionId && entryMode === "section") return;
     setSaving(true);
     let mediaUrl = form.mediaUrl;
     let imageUrl = form.imageUrl;
@@ -591,39 +507,62 @@ function ExamsPanel({ questions, setMessage, onSaved }: { questions: AdminQuesti
     if (response.ok) await onSaved();
   }
 
-  const isListeningBatch = form.levelId === "hsk1" && form.part === "listening" && !editingQuestionId && (
-    (form.section === "1" && form.format === "true-false") ||
-    ((form.section === "2" || form.section === "3") && form.format === "image-choice") ||
-    (form.section === "4" && form.format === "choice")
-  );
-  const batchImageCount = form.section === "1" ? 1 : form.section === "2" ? 3 : form.section === "3" ? 6 : 0;
-  const batchInstructions = form.section === "1"
-    ? "กรอกภาพ 1 ภาพและคำตอบ ถูก/ผิด"
-    : form.section === "2"
-      ? "กรอกภาพตัวเลือก A, B, C แล้วเลือกคำตอบที่ถูกต้อง"
-      : form.section === "3"
-        ? "กรอกภาพตัวเลือก A-F แล้วเลือกคำตอบที่ถูกต้องสำหรับข้อนี้"
-        : "กรอกข้อความตัวเลือก A, B, C และเพิ่มช่องได้ตามต้องการ";
+  const levelSpec = getLevelSpec(form.levelId);
+  const partOptions: ExamPart[] = levelSpec ? levelSpec.parts.map((part) => part.part) : ["listening", "reading", "writing"];
+  const specSections = levelSpec?.sections.filter((spec) => spec.part === form.part) ?? [];
+  const sectionSpec = getSectionSpec(form.levelId, form.part, form.section);
+  const useSectionBuilder = Boolean(sectionSpec) && !editingQuestionId && entryMode === "section";
+  const sameSectionQuestions = questions.filter((question) => question.levelId === form.levelId && question.documentId === form.documentId.trim() && question.part === form.part && question.section === form.section);
+
+  // Live preview of the single-question form, rendered with the same paper the quiz uses.
+  const draftFiles = useMemo(() => [audioFile, imageFile, ...choiceImageFiles], [audioFile, imageFile, choiceImageFiles]);
+  const draftUrls = useMemo(() => draftFiles.map((file) => (file ? URL.createObjectURL(file) : "")), [draftFiles]);
+  useEffect(() => () => draftUrls.forEach((url) => url && URL.revokeObjectURL(url)), [draftUrls]);
+  const draftChoiceImages = usesChoiceImages ? draftUrls.slice(2) : [];
+  const draftQuestion: ExamQuestion = {
+    id: editingQuestionId ?? "draft",
+    prompt: form.prompt,
+    answer: form.answer,
+    choices: form.format === "true-false" ? [] : form.choices,
+    format: form.format,
+    questionNumber: Number(form.questionNumber) || 0,
+    isExample: form.isExample,
+    mediaUrl: draftUrls[0] || form.mediaUrl,
+    imageUrl: draftChoiceImages.some(Boolean) ? JSON.stringify(draftChoiceImages) : draftUrls[1] || form.imageUrl,
+  };
+
+  function chooseSection(section: string) {
+    const spec = getSectionSpec(form.levelId, form.part, section);
+    setForm((current) => ({ ...current, section, ...(spec ? { questionNumber: String(spec.firstNumber) } : {}) }));
+    if (spec) setFormat(spec.format === "fill-blank" ? "choice" : spec.format);
+  }
+
+  function choosePart(part: string) {
+    const firstSpec = levelSpec?.sections.find((spec) => spec.part === part);
+    setForm((current) => ({ ...current, part, section: firstSpec?.section ?? "1", ...(firstSpec ? { questionNumber: String(firstSpec.firstNumber) } : {}) }));
+    if (firstSpec) setFormat(firstSpec.format === "fill-blank" ? "choice" : firstSpec.format);
+  }
+
+  function openSectionBuilder(levelId: string, documentId: string, part: string, section: string) {
+    const spec = getSectionSpec(levelId, part, section);
+    setEditingQuestionId(null);
+    setEntryMode("section");
+    setForm((current) => ({ ...current, levelId, documentId, part, section, questionNumber: String(spec?.firstNumber ?? 1), prompt: "", answer: "", isExample: false }));
+    setShowForm(true);
+  }
 
   if (showForm) {
     return (
       <div className="admin-content">
         <section className="admin-page-intro">
-          <div><span className="admin-eyebrow">Custom Exam Builder</span><h2>{editingQuestionId ? "แก้ไขข้อสอบ" : "เพิ่มข้อสอบเอง"}</h2><p>กำหนดระดับ ชุดข้อสอบ พาร์ท ส่วน และรูปแบบได้เองทั้งหมด</p></div>
+          <div><span className="admin-eyebrow">HSK Exam Builder</span><h2>{editingQuestionId ? "แก้ไขข้อสอบ" : "เพิ่มข้อสอบ"}</h2><p>เลือกระดับ ชุด พาร์ท และส่วน ระบบจะจัดรูปแบบให้ตรงกับข้อสอบจริงและแสดงหน้าข้อสอบแบบเดียวกับที่ผู้เรียนเห็น</p></div>
           <button type="button" className="admin-outline-button admin-form-close" onClick={() => { setShowForm(false); setEditingQuestionId(null); resetForm(false); }}>ปิดฟอร์ม</button>
         </section>
         <form className="admin-card admin-vocabulary-form" onSubmit={createQuestion}>
-          <div className="admin-form-heading"><div><span className="admin-card-kicker">Question Builder</span><h3>ข้อมูลข้อสอบ</h3></div><span className="admin-required-note">เพิ่มระดับและชุดสอบได้จากช่องนี้</span></div>
-          {isListeningBatch ? <div className="admin-batch-exam-builder">
-            <div className="admin-form-heading"><div><span className="admin-card-kicker">HSK 1 · Listening · Part {form.section}</span><h3>ตัวอย่าง + ข้อสอบ 1-5</h3></div><span className="admin-required-note">ทั้งหมด 6 แถว</span></div>
-            <p className="admin-batch-help">{batchInstructions} ระบบจะบันทึกตัวอย่างแยกไว้และไม่นำไปนับเป็นข้อสอบของผู้เรียน</p>
-            <label>ชุดข้อสอบ *<input required value={form.documentId} onChange={(event) => update("documentId", event.target.value)} list="exam-document-options" placeholder="เช่น H11329 หรือ ชุดที่ 1" /><datalist id="exam-document-options">{existingDocuments.map((documentId) => <option key={documentId} value={documentId} />)}</datalist></label>
-            <label>ไฟล์เสียงประจำส่วน *<input required type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,.mp3,.wav,.ogg,.m4a" onChange={(event) => setBatchAudioFile(event.target.files?.[0] ?? null)} /></label>
-            <div className="admin-batch-exam-grid">{batchRows.map((row, index) => <div className="admin-batch-exam-row" key={index}><strong>{row.isExample ? "ตัวอย่าง" : `ข้อ ${index}`}</strong>{Array.from({ length: batchImageCount }, (_, imageIndex) => <label key={imageIndex}>ภาพ {batchImageCount > 1 ? String.fromCharCode(65 + imageIndex) : "ประกอบ"} *<input required type="file" accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif" onChange={(event) => setBatchRows((current) => current.map((item, rowIndex) => rowIndex === index ? { ...item, imageFiles: item.imageFiles.map((file, fileIndex) => fileIndex === imageIndex ? (event.target.files?.[0] ?? null) : file) } : item))} /></label>)}{form.section === "4" && <div className="admin-batch-choice-fields">{row.choices.map((choice, choiceIndex) => <label key={choiceIndex}>ตัวเลือก {String.fromCharCode(65 + choiceIndex)}<input required value={choice} onChange={(event) => setBatchRows((current) => current.map((item, rowIndex) => rowIndex === index ? { ...item, choices: item.choices.map((value, valueIndex) => valueIndex === choiceIndex ? event.target.value : value) } : item))} /></label>)}<button type="button" className="admin-outline-button" onClick={() => setBatchRows((current) => current.map((item, rowIndex) => rowIndex === index ? { ...item, choices: [...item.choices, ""] } : item))}>+ เพิ่มช่องตัวเลือก</button></div>}<label>ข้อความ/เสียง (ถ้ามี)<textarea rows={2} value={row.prompt} onChange={(event) => updateBatchRow(index, "prompt", event.target.value)} placeholder="กรอกข้อความที่อ่านหรือคำถาม" /></label><label>คำตอบที่ถูกต้อง *<select required value={row.answer} onChange={(event) => updateBatchRow(index, "answer", event.target.value)}><option value="">เลือกคำตอบ</option>{form.section === "1" ? <><option value="ถูก">ถูก</option><option value="ผิด">ผิด</option></> : row.choices.map((choice, choiceIndex) => choice && <option key={`${choice}-${choiceIndex}`} value={choice}>{form.section === "4" ? `${String.fromCharCode(65 + choiceIndex)}: ${choice}` : choice}</option>)}</select></label></div>)}</div>
-            <div className="admin-form-actions"><span>ตัวอย่างใช้สำหรับแสดงรูปแบบ ไม่คิดคะแนน</span><button className="admin-primary-button" type="button" disabled={saving} onClick={() => void createHsk1ListeningPart1Batch()}>{saving ? "กำลังบันทึก..." : "บันทึก 6 รายการ"}</button></div>
-          </div> : <div className="admin-form-grid">
+          <div className="admin-form-heading"><div><span className="admin-card-kicker">โครงสร้างข้อสอบ</span><h3>{levelSpec?.titleZh ?? "ข้อมูลข้อสอบ"}{form.documentId ? ` · ${form.documentId}` : ""}</h3></div>{sectionSpec && !editingQuestionId && <div className="admin-mode-switch" role="tablist"><button type="button" role="tab" aria-selected={entryMode === "section"} className={entryMode === "section" ? "is-active" : ""} onClick={() => setEntryMode("section")}>เพิ่มทั้งส่วน (แนะนำ)</button><button type="button" role="tab" aria-selected={entryMode === "single"} className={entryMode === "single" ? "is-active" : ""} onClick={() => setEntryMode("single")}>เพิ่มทีละข้อ</button></div>}</div>
+          <div className="admin-form-grid">
             <label>ระดับ *
-              <select required value={form.levelId} onChange={(event) => update("levelId", event.target.value)}>
+              <select required value={form.levelId} onChange={(event) => { const levelId = event.target.value; setForm((current) => ({ ...current, levelId, part: "", section: "" })); }}>
                 <option value="">เลือกระดับ</option>
                 <option value="hsk1">HSK 1</option>
                 <option value="hsk2">HSK 2</option>
@@ -634,54 +573,113 @@ function ExamsPanel({ questions, setMessage, onSaved }: { questions: AdminQuesti
                 <option value="hsk7-9">HSK 7-9</option>
               </select>
             </label>
-            <label>ชุดข้อสอบ *<input required value={form.documentId} onChange={(event) => update("documentId", event.target.value)} list="exam-document-options" placeholder="เช่น H11329 หรือ ชุดที่ 1" /><datalist id="exam-document-options">{existingDocuments.map((documentId) => <option key={documentId} value={documentId} />)}</datalist></label>
+            <label>ชุดข้อสอบ *<input required value={form.documentId} onChange={(event) => update("documentId", event.target.value)} list="exam-document-options" placeholder={form.levelId ? `เช่น H${form.levelId.replace(/\D/g, "") || "1"}1329` : "เช่น H11329"} /><datalist id="exam-document-options">{existingDocuments.map((documentId) => <option key={documentId} value={documentId} />)}</datalist></label>
             <label>พาร์ท *
-              <select required value={form.part} onChange={(event) => { const nextPart = event.target.value; update("part", nextPart); update("section", "1"); if (nextPart === "listening" && form.levelId === "hsk1") { setBatchRows(createListeningBatchRows("1")); setFormat("true-false"); } }}>
+              <select required value={form.part} onChange={(event) => choosePart(event.target.value)}>
                 <option value="">เลือกพาร์ท</option>
-                <option value="listening">ทักษะการฟัง (听力)</option>
-                <option value="reading">ทักษะการอ่าน (阅读)</option>
-                {form.levelId !== "hsk1" && form.levelId !== "hsk2" && <option value="writing">ทักษะการเขียน (书写)</option>}
+                {partOptions.map((part) => <option key={part} value={part}>{partNames[part].th} ({partNames[part].zh})</option>)}
               </select>
             </label>
-            <label>ส่วนที่ / Section *
-              {form.levelId === "hsk1" && form.part === "listening" ? (
-              <select required value={form.section} onChange={(event) => { const nextSection = event.target.value; update("section", nextSection); setBatchRows(createListeningBatchRows(nextSection)); setFormat(nextSection === "1" ? "true-false" : nextSection === "2" || nextSection === "3" ? "image-choice" : "choice"); }}>
-                  <option value="1">ส่วนที่ 1: ฟังประโยคแล้วดูว่าตรงกับรูปภาพหรือไม่</option>
-                  <option value="2">ส่วนที่ 2: ฟังเสียงแล้วเลือกรูปภาพที่สัมพันธ์กัน</option>
-                  <option value="3">ส่วนที่ 3: ฟังบทสนทนาสั้นๆ แล้วเลือกภาพที่ถูกต้อง</option>
-                  <option value="4">ส่วนที่ 4: เลือกประโยคคำตอบที่ถูกต้องจากเสียง</option>
-                </select>
-              ) : form.levelId === "hsk1" && form.part === "reading" ? (
-                <select required value={form.section} onChange={(event) => update("section", event.target.value)}>
-                  <option value="1">ส่วนที่ 1: ดูรูปภาพแล้วตัดสินว่าประโยคถูกต้องหรือไม่</option>
-                  <option value="2">ส่วนที่ 2: จับคู่คำศัพท์กับรูปภาพที่สัมพันธ์กัน</option>
-                  <option value="3">ส่วนที่ 3: เลือกประโยคตอบกลับที่สอดคล้องกับบทสนทนา</option>
-                  <option value="4">ส่วนที่ 4: เติมคำศัพท์ลงในช่องว่างจากตัวเลือก</option>
+            <label>ส่วนที่ *
+              {specSections.length ? (
+                <select required value={form.section} onChange={(event) => chooseSection(event.target.value)}>
+                  {specSections.map((spec) => <option key={spec.section} value={spec.section}>{sectionTitleZh(spec.section)} · ข้อ {spec.firstNumber}–{spec.firstNumber + spec.questionCount - 1}: {spec.instructionTh}</option>)}
                 </select>
               ) : (
-                <input required value={form.section} onChange={(event) => update("section", event.target.value)} placeholder="เช่น 1, 2, listening-a" />
+                <input required value={form.section} onChange={(event) => update("section", event.target.value)} placeholder="เช่น 1, 2, 3" />
               )}
             </label>
-            <label>รูปแบบข้อสอบ<select value={form.format} onChange={(event) => setFormat(event.target.value)}><option value="choice">เลือกตอบ</option><option value="true-false">ถูก / ผิด</option><option value="image-choice">เลือกภาพ</option><option value="matching">จับคู่</option><option value="fill-blank">เติมคำ</option></select></label>
-            <label>เลขข้อ *<input required type="number" min="1" value={form.questionNumber} onChange={(event) => update("questionNumber", event.target.value)} /></label>
-            <label className="admin-form-wide">โจทย์ / ข้อความ<textarea rows={3} value={form.prompt} onChange={(event) => update("prompt", event.target.value)} placeholder="พิมพ์โจทย์ หรือปล่อยว่างได้ถ้าใช้เสียง/รูปเป็นโจทย์" /></label>
-            {needsChoices && <div className="admin-form-wide admin-custom-choice-list"><div className="admin-form-heading"><div><span className="admin-card-kicker">Choices</span><h3>ตัวเลือกที่เพิ่มเอง</h3></div><button type="button" className="admin-outline-button" onClick={addChoice}>+ เพิ่มตัวเลือก</button></div>{form.choices.map((choice, index) => <div className="admin-custom-choice-row" key={index}><label>ตัวเลือก {index + 1}<input required value={choice} onChange={(event) => updateChoice(index, event.target.value)} placeholder={usesChoiceImages ? "เช่น A หรือคำอธิบายรูป" : "พิมพ์ตัวเลือก"} /></label>{usesChoiceImages && <label>รูปตัวเลือก<input type="file" accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif" onChange={(event) => setChoiceImageFiles((current) => current.map((file, fileIndex) => fileIndex === index ? (event.target.files?.[0] ?? null) : file))} /></label>}<button type="button" className="admin-text-button danger" onClick={() => removeChoice(index)} disabled={form.choices.length <= 2}>ลบ</button></div>)}</div>}
-            <label>คำตอบที่ถูก *{answerChoices.length ? <select required value={form.answer} onChange={(event) => update("answer", event.target.value)}><option value="">เลือกคำตอบ</option>{answerChoices.map((choice) => <option key={choice} value={choice}>{choice}</option>)}</select> : <input required value={form.answer} onChange={(event) => update("answer", event.target.value)} placeholder="พิมพ์คำตอบ" />}</label>
-            <label>แนบไฟล์เสียงเข้า R2 (ถ้ามี)<input type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,.mp3,.wav,.ogg,.m4a" onChange={(event) => setAudioFile(event.target.files?.[0] ?? null)} /></label>
-            <label>แนบรูปภาพเข้า R2 (ถ้ามี)<input type="file" accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif" onChange={(event) => setImageFile(event.target.files?.[0] ?? null)} /></label>
-          </div>}
-          {!isListeningBatch && <div className="admin-form-actions"><span>ใช้ระดับและชุดข้อสอบเดียวกันเพื่อรวมข้อสอบเป็นชุดเดียว</span><button className="admin-primary-button" type="submit" disabled={saving}>{uploadingMedia ? "กำลังอัปโหลดไฟล์..." : saving ? "กำลังบันทึก..." : editingQuestionId ? "บันทึกการแก้ไข" : "บันทึกแล้วเพิ่มข้อต่อไป"}</button></div>}
+          </div>
+
+          {useSectionBuilder && sectionSpec ? (
+            <ExamSectionBuilder
+              key={`${form.levelId}-${form.part}-${form.section}`}
+              levelId={form.levelId}
+              documentId={form.documentId}
+              spec={sectionSpec}
+              existingCount={sameSectionQuestions.length}
+              setMessage={setMessage}
+              onSaved={onSaved}
+            />
+          ) : form.part && form.section ? (
+            <div className="admin-section-builder">
+              <div className="admin-section-builder-form">
+                <div className="admin-form-grid">
+                  <label>รูปแบบข้อสอบ<select value={form.format} onChange={(event) => setFormat(event.target.value)}><option value="choice">เลือกตอบ</option><option value="true-false">ถูก / ผิด (✓ ✗)</option><option value="image-choice">เลือกภาพ</option><option value="matching">จับคู่ A–F</option><option value="fill-blank">เติมคำ</option></select></label>
+                  <label>เลขข้อ *<input required type="number" min="0" value={form.questionNumber} onChange={(event) => update("questionNumber", event.target.value)} /></label>
+                  <label className="admin-checkbox-field"><input type="checkbox" checked={form.isExample} onChange={(event) => setForm((current) => ({ ...current, isExample: event.target.checked }))} /> เป็นข้อตัวอย่าง (例如) ไม่คิดคะแนน</label>
+                  <label className="admin-form-wide">{form.part === "listening" ? "บทพูดในเสียง (แสดงตอนเฉลย)" : "โจทย์ / ข้อความ"}<textarea rows={3} value={form.prompt} onChange={(event) => update("prompt", event.target.value)} placeholder="พิมพ์โจทย์ หรือปล่อยว่างได้ถ้าใช้เสียง/รูปเป็นโจทย์" /></label>
+                  {needsChoices && <div className="admin-form-wide admin-custom-choice-list"><div className="admin-form-heading"><div><span className="admin-card-kicker">Choices</span><h3>ตัวเลือก A, B, C...</h3></div><button type="button" className="admin-outline-button" onClick={addChoice}>+ เพิ่มตัวเลือก</button></div>{form.choices.map((choice, index) => <div className="admin-custom-choice-row" key={index}><label>ตัวเลือก {String.fromCharCode(65 + index)}<input required value={choice} onChange={(event) => updateChoice(index, event.target.value)} placeholder={usesChoiceImages ? `เช่น ${String.fromCharCode(65 + index)}` : "พิมพ์ตัวเลือก"} /></label>{usesChoiceImages && <label>รูปตัวเลือก<input type="file" accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif" onChange={(event) => setChoiceImageFiles((current) => current.map((file, fileIndex) => fileIndex === index ? (event.target.files?.[0] ?? null) : file))} /></label>}<button type="button" className="admin-text-button danger" onClick={() => removeChoice(index)} disabled={form.choices.length <= 2}>ลบ</button></div>)}</div>}
+                  <label>คำตอบที่ถูก *{answerChoices.length ? <select required value={form.answer} onChange={(event) => update("answer", event.target.value)}><option value="">เลือกคำตอบ</option>{answerChoices.map((choice, index) => <option key={choice} value={choice}>{form.format === "true-false" ? (choice === "ถูก" ? "✓ ถูก" : "✗ ผิด") : `${String.fromCharCode(65 + index)}: ${choice}`}</option>)}</select> : <input required value={form.answer} onChange={(event) => update("answer", event.target.value)} placeholder="พิมพ์คำตอบ" />}</label>
+                  <label>ไฟล์เสียง (ถ้ามี)<input type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,.mp3,.wav,.ogg,.m4a" onChange={(event) => setAudioFile(event.target.files?.[0] ?? null)} /></label>
+                  {!usesChoiceImages && <label>รูปประกอบโจทย์ (ถ้ามี)<input type="file" accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif" onChange={(event) => setImageFile(event.target.files?.[0] ?? null)} /></label>}
+                </div>
+                <div className="admin-form-actions"><span>{sameSectionQuestions.length ? `ส่วนนี้ในชุดมีอยู่แล้ว ${sameSectionQuestions.length} รายการ` : "ใช้ระดับ ชุด พาร์ท และส่วนเดียวกันเพื่อรวมเป็นหน้าเดียวกัน"}</span><button className="admin-primary-button" type="submit" disabled={saving}>{uploadingMedia ? "กำลังอัปโหลดไฟล์..." : saving ? "กำลังบันทึก..." : editingQuestionId ? "บันทึกการแก้ไข" : "บันทึกแล้วเพิ่มข้อต่อไป"}</button></div>
+              </div>
+              <div className="admin-exam-preview">
+                <span className="admin-card-kicker">ตัวอย่างหน้าข้อสอบที่ผู้เรียนจะเห็น (แสดงเฉลยสีเขียว)</span>
+                <ExamSectionPaper levelId={form.levelId} part={form.part} section={form.section} questions={[...sameSectionQuestions.filter((question) => question.id !== editingQuestionId), draftQuestion].sort((left, right) => Number(Boolean(right.isExample)) - Number(Boolean(left.isExample)) || (left.questionNumber ?? 0) - (right.questionNumber ?? 0))} reveal />
+              </div>
+            </div>
+          ) : (
+            <p className="admin-empty">เลือกพาร์ทและส่วนเพื่อเริ่มเพิ่มข้อสอบ</p>
+          )}
         </form>
       </div>
     );
   }
 
+  const [previewLevel, previewDocument, previewPart = "", previewSection = ""] = previewKey.split("::");
+  const previewSet = previewKey ? examSets.find((exam) => exam.levelId === previewLevel && exam.documentId === previewDocument) : undefined;
+  const previewQuestions = previewSet ? questions.filter((question) => question.levelId === previewSet.levelId && question.documentId === previewSet.documentId && question.part === previewPart && question.section === previewSection).sort((left, right) => Number(Boolean(right.isExample)) - Number(Boolean(left.isExample)) || left.questionNumber - right.questionNumber) : [];
+
   return (
     <div className="admin-content">
-      <section className="admin-page-intro"><div><span className="admin-eyebrow">Custom Exam Builder</span><h2>ระบบสอบ HSK</h2><p>เพิ่มระดับและชุดข้อสอบเอง ไม่มี Blueprint บังคับ</p></div><button type="button" className="admin-primary-button" onClick={() => { resetForm(false); setShowForm(true); }}>เพิ่มข้อสอบ / ชุดใหม่</button></section>
-      <section className="admin-exam-notice"><strong>ชุดข้อสอบที่สร้างเอง</strong><span>ระบบสรุปจากระดับและชื่อชุดข้อสอบที่แอดมินกรอกไว้ในข้อสอบจริง</span></section>
-      <section className="admin-exam-grid">{examSets.map((exam) => <article className="admin-card admin-exam-card" key={exam.id}><div className="admin-exam-heading"><div><span className="admin-card-kicker">Custom Set</span><h3>{exam.documentId}</h3></div><span className="admin-draft-badge">Live</span></div><p>{exam.levelId.toUpperCase()} · {exam.total.toLocaleString("th-TH")} ข้อ</p><div className="admin-exam-parts">{exam.parts.map(([part, count]) => <div className="admin-exam-part" key={part}><span><strong>{part}</strong><small>พาร์ท</small></span><b>{count}<small>ข้อ</small></b></div>)}</div><a className="admin-outline-button" href={`/quiz?level=${encodeURIComponent(exam.levelId)}`} target="_blank" rel="noreferrer">เปิดชุดสอบ</a></article>)}{!examSets.length && <p className="admin-empty">ยังไม่มีชุดข้อสอบ กดเพิ่มข้อสอบ / ชุดใหม่เพื่อสร้างชุดแรก</p>}</section>
-      <section className="admin-card admin-table-card"><div className="admin-table-meta"><strong>ข้อสอบในระบบ {questions.length} ข้อ</strong><span>เรียงตามระดับ เอกสาร พาร์ท และเลขข้อ</span></div><div className="admin-table-scroll"><table className="admin-users-table"><thead><tr><th>ชุดเอกสาร</th><th>ระดับ / พาร์ท</th><th>ข้อ</th><th>รูปแบบ</th><th>โจทย์</th><th>จัดการ</th></tr></thead><tbody>{questions.map((question) => <tr key={question.id}><td><strong>{question.documentId}</strong><small>{question.section}</small></td><td>{question.levelId.toUpperCase()}<small>{question.part}</small></td><td>{question.questionNumber}</td><td>{question.format}</td><td>{question.prompt || "ใช้สื่อเป็นโจทย์"}</td><td><div className="admin-row-actions"><button type="button" onClick={() => editQuestion(question)}>แก้ไข</button><button type="button" className="danger" onClick={() => void removeQuestion(question)}>ลบ</button></div></td></tr>)}</tbody></table>{!questions.length && <p className="admin-empty">ยังไม่มีข้อสอบที่เพิ่มจาก Admin</p>}</div></section>
+      <section className="admin-page-intro"><div><span className="admin-eyebrow">HSK Exam Builder</span><h2>ระบบสอบ HSK</h2><p>ชุดข้อสอบจัดตามโครงสร้างข้อสอบจริง กดที่ส่วนเพื่อดูหน้าข้อสอบหรือเพิ่มข้อสอบในส่วนนั้น</p></div><button type="button" className="admin-primary-button" onClick={() => { resetForm(false); setEntryMode("section"); setShowForm(true); }}>เพิ่มข้อสอบ / ชุดใหม่</button></section>
+      <section className="admin-exam-grid">
+        {examSets.map((exam) => {
+          const spec = getLevelSpec(exam.levelId);
+          const setQuestions = questions.filter((question) => question.levelId === exam.levelId && question.documentId === exam.documentId);
+          const sections = spec?.sections.length
+            ? spec.sections.map((section) => ({ part: section.part, section: section.section, expected: section.questionCount }))
+            : Array.from(new Set(setQuestions.map((question) => `${question.part}::${question.section}`))).sort().map((key) => { const [part, section] = key.split("::"); return { part, section, expected: 0 }; });
+          const scoredTotal = setQuestions.filter((question) => !question.isExample).length;
+          const expectedTotal = spec?.parts.reduce((total, part) => total + part.questions, 0);
+          return (
+            <article className="admin-card admin-exam-card" key={exam.id}>
+              <div className="admin-exam-heading"><div><span className="admin-card-kicker">{spec?.titleZh ?? exam.levelId.toUpperCase()}</span><h3>{exam.documentId}</h3></div><span className="admin-draft-badge">{expectedTotal ? `${scoredTotal}/${expectedTotal} ข้อ` : `${scoredTotal} ข้อ`}</span></div>
+              <div className="admin-exam-sections">
+                {sections.map((section) => {
+                  const inSection = setQuestions.filter((question) => question.part === section.part && question.section === section.section);
+                  const count = inSection.filter((question) => !question.isExample).length;
+                  const hasExample = inSection.some((question) => question.isExample);
+                  const key = `${exam.id}::${section.part}::${section.section}`;
+                  const status = section.expected ? (count >= section.expected ? "is-complete" : count > 0 ? "is-partial" : "is-empty") : count ? "is-complete" : "is-empty";
+                  return (
+                    <div className={`admin-exam-section ${status} ${previewKey === key ? "is-open" : ""}`} key={key}>
+                      <button type="button" onClick={() => setPreviewKey(previewKey === key ? "" : key)} disabled={!inSection.length} title="ดูหน้าข้อสอบ">
+                        <strong>{partNames[section.part as ExamPart]?.zh ?? section.part} {sectionTitleZh(section.section).replace(/[第部分]/g, "")}</strong>
+                        <small>{count}{section.expected ? `/${section.expected}` : ""} ข้อ{hasExample ? " · 例" : ""}</small>
+                      </button>
+                      <button type="button" className="admin-exam-section-add" onClick={() => openSectionBuilder(exam.levelId, exam.documentId, section.part, section.section)} title="เพิ่มข้อสอบในส่วนนี้">+</button>
+                    </div>
+                  );
+                })}
+              </div>
+              <a className="admin-outline-button" href={`/quiz?level=${encodeURIComponent(exam.levelId)}`} target="_blank" rel="noreferrer">เปิดหน้าสอบของผู้เรียน</a>
+            </article>
+          );
+        })}
+        {!examSets.length && <p className="admin-empty">ยังไม่มีชุดข้อสอบ กดเพิ่มข้อสอบ / ชุดใหม่เพื่อสร้างชุดแรก</p>}
+      </section>
+      {previewSet && previewQuestions.length > 0 && (
+        <section className="admin-card admin-exam-preview">
+          <div className="admin-table-meta"><strong>{previewSet.documentId} · {partNames[previewPart as ExamPart]?.zh ?? previewPart} {sectionTitleZh(previewSection)}</strong><button type="button" className="admin-outline-button" onClick={() => setPreviewKey("")}>ปิดตัวอย่าง</button></div>
+          <ExamSectionPaper levelId={previewSet.levelId} part={previewPart} section={previewSection} questions={previewQuestions} reveal />
+          <div className="admin-row-actions admin-preview-actions">{previewQuestions.map((question) => <span key={question.id}><b>{question.isExample ? "例如" : `ข้อ ${question.questionNumber}`}</b><button type="button" onClick={() => editQuestion(question)}>แก้ไข</button><button type="button" className="danger" onClick={() => void removeQuestion(question)}>ลบ</button></span>)}</div>
+        </section>
+      )}
+      <section className="admin-card admin-table-card"><div className="admin-table-meta"><strong>ข้อสอบในระบบ {questions.length} ข้อ</strong><span>เรียงตามระดับ เอกสาร พาร์ท และเลขข้อ</span></div><div className="admin-table-scroll"><table className="admin-users-table"><thead><tr><th>ชุดเอกสาร</th><th>ระดับ / พาร์ท</th><th>ข้อ</th><th>รูปแบบ</th><th>โจทย์</th><th>จัดการ</th></tr></thead><tbody>{questions.map((question) => <tr key={question.id}><td><strong>{question.documentId}</strong><small>{partNames[question.part as ExamPart]?.zh ?? question.part} {sectionTitleZh(question.section)}</small></td><td>{question.levelId.toUpperCase()}<small>{partNames[question.part as ExamPart]?.th ?? question.part}</small></td><td>{question.isExample ? "例如" : question.questionNumber}</td><td>{question.format}</td><td>{question.prompt || "ใช้สื่อเป็นโจทย์"}</td><td><div className="admin-row-actions"><button type="button" onClick={() => editQuestion(question)}>แก้ไข</button><button type="button" className="danger" onClick={() => void removeQuestion(question)}>ลบ</button></div></td></tr>)}</tbody></table>{!questions.length && <p className="admin-empty">ยังไม่มีข้อสอบที่เพิ่มจาก Admin</p>}</div></section>
     </div>
   );
 }
